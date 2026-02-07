@@ -37,7 +37,7 @@ ARG USER=vscode
 # Install useful things for development
 RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
- && apt-get install -y --no-install-recommends sudo git lldb clangd \
+ && apt-get install -y --no-install-recommends sudo git openssh-client lldb clangd \
  && rm -rf /var/lib/apt/lists/*
 
 # Create group and user using provided IDs

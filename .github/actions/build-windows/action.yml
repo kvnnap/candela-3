@@ -1,0 +1,17 @@
+name: Build Candela 3
+description: Build Candela 3 for Windows
+
+runs:
+  using: composite
+  steps:
+    - name: Get latest CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Setup MSVC on Windows
+      uses: ilammy/msvc-dev-cmd@v1
+    
+    - name: Build on Windows
+      shell: cmd
+      run: |
+        cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install -DBUILD_SHARED_LIBS:BOOL=ON
+        cmake --build build --config Release --parallel --target install

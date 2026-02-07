@@ -36,6 +36,11 @@ install(TARGETS candela-3
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
+# Install any pdb files (Windows)
+# if(MSVC)
+# 	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
+# endif()
+
 # # Install the exports in the appropriate cmake folder
 # install(EXPORT candela-3-export
 # 	FILE Candela3Targets.cmake
