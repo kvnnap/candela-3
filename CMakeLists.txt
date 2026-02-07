@@ -12,8 +12,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(candela-3)
 
-add_executable(candela-3 main.cpp)
-# target_sources(candela-3 PRIVATE FILE_SET CXX_MODULES FILES test_module.cppm another_module.cppm shape_module.cppm separated_module.cppm split_main_module.cppm)
+add_custom_target(generate_version
+    COMMAND ${CMAKE_SOURCE_DIR}/version/generate_auto_version.$<IF:$<PLATFORM_ID:Windows>,bat,sh>
+    BYPRODUCTS ${CMAKE_SOURCE_DIR}/version/auto_version.h
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Generating version file"
+)
+
+add_executable(candela-3 main.cpp version/version.cpp version/auto_version.h)
+add_dependencies(candela-3 generate_version)
+
+target_sources(candela-3 PRIVATE FILE_SET cxx_modules TYPE CXX_MODULES FILES 
+    version/version.cppm
+)
 set_target_properties(candela-3 PROPERTIES 
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON
