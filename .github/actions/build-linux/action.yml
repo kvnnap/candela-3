@@ -5,7 +5,7 @@ runs:
   using: composite
   steps:
     - name: Build on Ubuntu (using Docker)
-      uses: addnab/docker-run-action@v3
+      uses: maus007/docker-run-action-fork@v1
       with:
         image: kvnnap/clang:github
         options: -v ${{github.workspace}}:/workdir -w /workdir
