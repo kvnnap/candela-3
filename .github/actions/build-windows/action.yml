@@ -9,9 +9,25 @@ runs:
 
     - name: Setup MSVC on Windows
       uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Checkout vcpkg
+      shell: cmd
+      run: git clone https://github.com/microsoft/vcpkg.git
+
+    - name: Bootstrap vcpkg
+      shell: cmd
+      run: |
+        cd vcpkg
+        .\bootstrap-vcpkg.bat
+
+    - name: Set VCPKG_ROOT
+      shell: cmd
+      run: echo "VCPKG_ROOT=${{ github.workspace }}\\vcpkg" >> $GITHUB_ENV
     
     - name: Build on Windows
       shell: cmd
       run: |
-        cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install -DBUILD_SHARED_LIBS:BOOL=ON
-        cmake --build build --config Release --parallel --target install
+        cmake -S . -B build --preset msvc-release -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install -DBUILD_SHARED_LIBS:BOOL=ON
+        cmake --build build --parallel --target install
+      # cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install -DBUILD_SHARED_LIBS:BOOL=ON
+      # cmake --build build --config Release --parallel --target install

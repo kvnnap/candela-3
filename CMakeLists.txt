@@ -12,6 +12,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(candela-3)
 
+find_package(Vulkan REQUIRED)
+
 add_custom_target(generate_version
     COMMAND ${CMAKE_SOURCE_DIR}/version/generate_auto_version.$<IF:$<PLATFORM_ID:Windows>,bat,sh>
     BYPRODUCTS ${CMAKE_SOURCE_DIR}/version/auto_version.h
@@ -19,7 +21,7 @@ add_custom_target(generate_version
     COMMENT "Generating version file"
 )
 
-add_executable(candela-3 main.cpp version/version.cpp version/auto_version.h)
+add_executable(candela-3 main.cpp version/version.cpp)
 add_dependencies(candela-3 generate_version)
 
 target_sources(candela-3 PRIVATE FILE_SET cxx_modules TYPE CXX_MODULES FILES 

@@ -10,5 +10,5 @@ runs:
         image: kvnnap/clang:github
         options: -v ${{github.workspace}}:/workdir -w /workdir
         run: |
-          cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_INSTALL_PREFIX:PATH=$PWD/install -DBUILD_SHARED_LIBS:BOOL=ON
-          cmake --build build --config Release --parallel --target install
+          cmake -S . -B build --preset general-release -DCMAKE_INSTALL_PREFIX:PATH=$PWD/install -DBUILD_SHARED_LIBS:BOOL=ON
+          cmake --build build --parallel --target install

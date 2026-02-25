@@ -7,6 +7,7 @@ ARG CMAKETAR=cmake-4.2.3-linux-x86_64.tar.gz
 RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
  && apt-get install -y --no-install-recommends git clang ninja-build wget ca-certificates \
+                                               curl zip unzip tar python3 pkg-config \
  && rm -rf /var/lib/apt/lists/*
 
 # CMAKE
@@ -28,6 +29,14 @@ RUN userdel -r ubuntu \
 
 USER ${USER}
 
+# vcpkg
+RUN cd "/home/${USER}" \
+ && git clone https://github.com/microsoft/vcpkg.git \
+ && cd vcpkg \
+ && ./bootstrap-vcpkg.sh
+
+ENV VCPKG_ROOT="/home/${USER}/vcpkg"
+
 # vscode Section
 FROM base AS vscode
 ARG UID=1000
@@ -48,3 +57,11 @@ RUN userdel -r ubuntu \
  && chmod 0440 /etc/sudoers.d/"${USER}"
 
 USER ${USER}
+
+# vcpkg
+RUN cd "/home/${USER}" \
+ && git clone https://github.com/microsoft/vcpkg.git \
+ && cd vcpkg \
+ && ./bootstrap-vcpkg.sh
+
+ENV VCPKG_ROOT="/home/${USER}/vcpkg"
