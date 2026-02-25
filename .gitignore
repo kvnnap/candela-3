@@ -2,3 +2,4 @@
 /.cache/
 /install/
 /version/auto_version.h
+compile_commands.json

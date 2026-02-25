@@ -18,7 +18,9 @@
       "binaryDir": "${sourceDir}/build/general-debug",
       "installDir": "${sourceDir}/install/general-debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
       }
     },
 
@@ -28,7 +30,9 @@
       "binaryDir": "${sourceDir}/build/general-release",
       "installDir": "${sourceDir}/install/general-release",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
       }
     },
 

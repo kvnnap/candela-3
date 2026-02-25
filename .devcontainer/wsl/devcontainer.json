@@ -1,0 +1,58 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/cpp
+{
+	"name": "C++ Vulan WSL",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"target": "vscode",
+		"args": {
+			"USER": "kevin",
+			"UID": "1002",
+			"GID": "1002"
+		}
+	},
+
+	"runArgs": [
+		"--gpus",
+    	"all"
+	],
+
+	"mounts": [
+		"type=bind,source=/usr/lib/wsl,target=/usr/lib/wsl,readonly",
+		"type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix,readonly",
+		"type=bind,source=${localEnv:XDG_RUNTIME_DIR}/${localEnv:WAYLAND_DISPLAY},target=/tmp/${localEnv:WAYLAND_DISPLAY},readonly",
+		"type=bind,source=${localEnv:HOME}/.ssh,target=/home/kevin/.ssh,readonly",
+		"type=bind,source=/etc/localtime,target=/etc/localtime,readonly"
+	],
+
+	"containerEnv": {
+		"LD_LIBRARY_PATH": "/usr/lib/wsl/lib",
+		"XDG_RUNTIME_DIR": "/tmp",
+		"WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+		"DISPLAY": "${localEnv:DISPLAY}"
+	},
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "gcc -v",
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.cmake-tools",
+				"llvm-vs-code-extensions.vscode-clangd",
+				"vadimcn.vscode-lldb"
+			]
+		}
+	}
+}
