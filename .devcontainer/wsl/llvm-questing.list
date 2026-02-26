@@ -1,0 +1,11 @@
+# LLVM main toolchain
+deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/questing/ llvm-toolchain-questing main
+deb-src [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/questing/ llvm-toolchain-questing main
+
+# LLVM 20
+deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/questing/ llvm-toolchain-questing-20 main
+deb-src [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/questing/ llvm-toolchain-questing-20 main
+
+# LLVM 21
+deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/questing/ llvm-toolchain-questing-21 main
+deb-src [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/questing/ llvm-toolchain-questing-21 main
