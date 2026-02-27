@@ -7,15 +7,27 @@
 		"target": "vscode",
 		"args": {
 			"USER": "kevin",
-			"UID": "1002",
-			"GID": "1002"
+			"UID": "1000",
+			"GID": "1000"
 		}
 	},
 
+	"runArgs": [
+		// "--device=/dev/dri"
+	],
+
 	"mounts": [
+		// "type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix,readonly",
+		// "type=bind,source=${localEnv:XDG_RUNTIME_DIR}/${localEnv:WAYLAND_DISPLAY},target=/tmp/${localEnv:WAYLAND_DISPLAY},readonly",
 		"type=bind,source=${localEnv:HOME}/.ssh,target=/home/kevin/.ssh,readonly",
 		"type=bind,source=/etc/localtime,target=/etc/localtime,readonly"
 	],
+
+	"containerEnv": {
+		// "XDG_RUNTIME_DIR": "/tmp",
+		// "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+		// "DISPLAY": "${localEnv:DISPLAY}"
+	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

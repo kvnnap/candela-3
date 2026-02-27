@@ -52,7 +52,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 # Create group and user using provided IDs
 RUN userdel -r ubuntu \
  && groupadd -g "${GID}" "${USER}" \
- && useradd -u "${UID}" -g "${GID}" -m -s /bin/bash "${USER}" \
+ && groupadd -g 992 render \
+ && useradd -u "${UID}" -g "${GID}" -G render,video -m -s /bin/bash "${USER}" \
  && echo "${USER}" ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/"${USER}" \
  && chmod 0440 /etc/sudoers.d/"${USER}"
 

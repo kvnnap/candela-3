@@ -34,3 +34,19 @@ docker run --rm -it --gpus all \
  -e DISPLAY=$DISPLAY \
     kvnnap/vulkantest:latest
 ```
+
+## Linux (Ubuntu) Wayland
+
+For X11, check the commented stuff.
+
+```bash
+# xhost +local:
+# -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
+# -e DISPLAY=$DISPLAY \
+docker run --rm -it --device /dev/dri \
+  -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro \
+  -e XDG_RUNTIME_DIR=/tmp \
+  -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY \
+  ubuntu:resolute
+# xhost -local:
+```
