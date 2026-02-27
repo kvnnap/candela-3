@@ -1,5 +1,5 @@
 /build/
 /.cache/
 /install/
-/version/auto_version.h
+/apps/candela-3/version/auto_version.h
 compile_commands.json
