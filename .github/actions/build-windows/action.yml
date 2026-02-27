@@ -27,7 +27,7 @@ runs:
     - name: Build on Windows
       shell: cmd
       run: |
-        cmake -S . -B build --preset msvc-release -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install -DBUILD_SHARED_LIBS:BOOL=ON
+        cmake -S . -B build --preset msvc-release -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install
         cmake --build build --parallel --target install
       # cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_INSTALL_PREFIX:PATH=${{github.workspace}}/install -DBUILD_SHARED_LIBS:BOOL=ON
       # cmake --build build --config Release --parallel --target install
