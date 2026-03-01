@@ -11,7 +11,7 @@ add_custom_target(generate_version
 
 add_executable(candela-3)
 add_dependencies(candela-3 generate_version)
-target_link_libraries(candela-3 PRIVATE core)
+target_link_libraries(candela-3 PRIVATE core external)
 
 target_sources(candela-3 PRIVATE 
     main.cpp 
@@ -23,6 +23,7 @@ target_sources(candela-3 PRIVATE
     FILES 
         version/version.cppm
 )
+
 set_target_properties(candela-3 PROPERTIES 
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON

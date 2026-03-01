@@ -12,5 +12,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(candela-solution)
 
+add_subdirectory(libs/external)
 add_subdirectory(libs/core)
 add_subdirectory(apps/candela-3)
