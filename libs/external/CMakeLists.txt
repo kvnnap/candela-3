@@ -1,10 +1,13 @@
 project(external)
 
-find_package(cxxopts CONFIG REQUIRED)
+# find_package(cxxopts CONFIG REQUIRED)
+# find_package(CLI11 CONFIG REQUIRED)
+# find_package(lyra CONFIG REQUIRED)
 
 add_library(external)
 
-target_link_libraries(external PRIVATE cxxopts::cxxopts)
+# target_link_libraries(external PRIVATE cxxopts::cxxopts)
+# target_link_libraries(external PRIVATE CLI11::CLI11 bfg::lyra)
 
 # target_sources(external PUBLIC
 #     FILE_SET public_headers TYPE HEADERS
@@ -18,11 +21,11 @@ target_link_libraries(external PRIVATE cxxopts::cxxopts)
 #     configuration/configuration_node.cpp
 # )
 
-target_sources(external PUBLIC 
-    FILE_SET cxx_modules TYPE CXX_MODULES 
-    FILES
-        cxxopts.cppm
-)
+# target_sources(external PUBLIC 
+#     FILE_SET cxx_modules TYPE CXX_MODULES 
+#     FILES
+#         lyra.cppm
+# )
 
 set_target_properties(external PROPERTIES 
     CXX_STANDARD 23
