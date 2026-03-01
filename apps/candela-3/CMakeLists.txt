@@ -1,6 +1,6 @@
 project(candela-3)
 
-find_package(Vulkan REQUIRED)
+# find_package(Vulkan REQUIRED)
 
 add_custom_target(generate_version
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/version/generate_auto_version.$<IF:$<PLATFORM_ID:Windows>,bat,sh>
@@ -11,7 +11,7 @@ add_custom_target(generate_version
 
 add_executable(candela-3)
 add_dependencies(candela-3 generate_version)
-target_link_libraries(candela-3 PRIVATE configuration)
+target_link_libraries(candela-3 PRIVATE core)
 
 target_sources(candela-3 PRIVATE 
     main.cpp 
