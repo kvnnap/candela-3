@@ -17,6 +17,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
  && apt-get install -y --no-install-recommends git ninja-build wget ca-certificates clang-21 \
                                                curl zip unzip tar python3 pkg-config \
+                                               libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev pkg-config \
  && rm -rf /var/lib/apt/lists/* \
  && update-alternatives --install /usr/bin/clang clang /usr/bin/clang-21 210 \
  && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 210

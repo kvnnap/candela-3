@@ -8,6 +8,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
  && apt-get install -y --no-install-recommends git clang ninja-build wget ca-certificates \
                                                curl zip unzip tar python3 pkg-config \
+                                               libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev pkg-config \
  && rm -rf /var/lib/apt/lists/*
 
 # CMAKE
