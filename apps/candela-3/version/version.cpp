@@ -1,6 +1,4 @@
-module core.version;
-
-import std;
+module;
 
 #if __has_include("auto_version.h")
 #include "auto_version.h"
@@ -26,6 +24,10 @@ import std;
 #define STRINGIFY2(X) #X
 #define STRINGIFY(X) STRINGIFY2(X)
 
+module core.version;
+
+import std;
+
 const char* candela::version::Commit = STRINGIFY(CANDELA_COMMIT);
 const char* candela::version::Date = STRINGIFY(CANDELA_DATE);
 const bool candela::version::Dirty = CANDELA_DIRTY;
@@ -35,13 +37,12 @@ static const char dirty[] = "-dirty";
 
 const char* candela::version::GetCommitSummary()
 {
-    using namespace std;   
 	if (commitSummary[0] == '\0')
 	{
         constexpr auto hashLength = 7u;
-		memcpy(&commitSummary[0], &Commit[0], hashLength);
+		std::memcpy(&commitSummary[0], &Commit[0], hashLength);
 		if (Dirty)
-		    memcpy(&commitSummary[hashLength], &dirty[0], sizeof(dirty));
+		    std::memcpy(&commitSummary[hashLength], &dirty[0], sizeof(dirty));
 	}
 	return commitSummary;
 }
