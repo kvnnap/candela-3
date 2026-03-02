@@ -2,15 +2,20 @@ import std;
 
 import core.version;
 import candela.args;
+import candela.renderer;
 
 using std::cout;
+using std::cerr;
 using std::endl;
 using std::string;
+using std::exception;
 
 using candela::args::CandelaArguments;
 
 using candela::version::GetCommitSummary;
 using candela::version::Date;
+
+using candela::renderer::VulkanRenderer;
 
 int main(int argc, const char * const * argv)
 {
@@ -24,9 +29,18 @@ int main(int argc, const char * const * argv)
         return ca.error ? -1 : 0;
     
 
-    cout << "Loading: " << ca.configFile << endl;
+    // cout << "Loading: " << ca.configFile << endl;
 
     // We need to read the configuration and launch a renderer
+
+    try 
+    {
+        VulkanRenderer vk;
+    } catch (const exception& e) 
+    {
+        cerr << e.what() << endl;
+        return -1;
+    }
 
     return 0;
 }

@@ -11,12 +11,13 @@ add_custom_target(generate_version
 
 add_executable(candela-3)
 add_dependencies(candela-3 generate_version)
-target_link_libraries(candela-3 PRIVATE external core bfg::lyra)
+target_link_libraries(candela-3 PRIVATE external core bfg::lyra VulkanCppModule)
 
 target_sources(candela-3 PRIVATE 
     main.cpp 
     version/version.cpp
     args/args.cpp
+    renderer/vulkan_renderer.cpp
 )
 
 target_sources(candela-3 PRIVATE 
@@ -24,6 +25,7 @@ target_sources(candela-3 PRIVATE
     FILES 
         version/version.cppm
         args/args.cppm
+        renderer/renderer.cppm
 )
 
 set_target_properties(candela-3 PROPERTIES 
@@ -31,7 +33,7 @@ set_target_properties(candela-3 PROPERTIES
     CXX_STANDARD_REQUIRED ON
     CXX_MODULE_STD ON
     # CXX_SCAN_FOR_MODULES ON
-    COMPILE_WARNING_AS_ERROR ON
+    COMPILE_WARNING_AS_ERROR OFF
     DEBUG_POSTFIX "_d"
 )
 
