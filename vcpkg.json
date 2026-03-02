@@ -2,6 +2,7 @@
   "dependencies": [
     "rapidjson",
     "bfgroup-lyra",
+    "glfw3",
     "vulkan"
   ]
 }

@@ -3,11 +3,14 @@ project(external)
 # find_package(cxxopts CONFIG REQUIRED)
 # find_package(CLI11 CONFIG REQUIRED)
 # find_package(lyra CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
 
 add_library(external)
 
 # target_link_libraries(external PRIVATE cxxopts::cxxopts)
 # target_link_libraries(external PRIVATE CLI11::CLI11 bfg::lyra)
+target_link_libraries(external PRIVATE glfw)
+
 
 # target_sources(external PUBLIC
 #     FILE_SET public_headers TYPE HEADERS
@@ -21,11 +24,11 @@ add_library(external)
 #     configuration/configuration_node.cpp
 # )
 
-# target_sources(external PUBLIC 
-#     FILE_SET cxx_modules TYPE CXX_MODULES 
-#     FILES
-#         lyra.cppm
-# )
+target_sources(external PUBLIC 
+    FILE_SET cxx_modules TYPE CXX_MODULES 
+    FILES
+        glfw.cppm
+)
 
 set_target_properties(external PROPERTIES 
     CXX_STANDARD 23

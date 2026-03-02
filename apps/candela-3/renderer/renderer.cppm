@@ -1,5 +1,9 @@
 export module candela.renderer;
 
+import std;
+import external.glfw;
+import vulkan;
+
 export namespace candela::renderer
 {
 	class IRenderer
@@ -20,7 +24,13 @@ export namespace candela::renderer
         void init() override;
         void renderFrame() override;
 
+        void initWindow();
+        std::optional<bool> processMessages();
+        void cleanup();
     private:
-        
+        glfw::GLFWwindow* window;
+
+        vk::raii::Context  context;
+        vk::raii::Instance instance = nullptr;
     };
 }

@@ -36,6 +36,21 @@ int main(int argc, const char * const * argv)
     try 
     {
         VulkanRenderer vk;
+        vk.initWindow();
+        vk.init();
+
+        std::optional<int> exitCode;
+        while(true)
+        {
+            // run window message loop
+
+            exitCode = vk.processMessages();
+            if (exitCode)
+                break;
+        }
+        
+        vk.cleanup();
+
     } catch (const exception& e) 
     {
         cerr << e.what() << endl;
