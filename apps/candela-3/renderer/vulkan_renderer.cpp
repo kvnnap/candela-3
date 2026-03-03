@@ -16,7 +16,23 @@ VulkanRenderer::~VulkanRenderer()
 
 void VulkanRenderer::init()
 {
-    vk::Instance instance;
+    // Query the extensions needed by GLFW
+    std::uint32_t glfwExtensionCount{};
+    auto glfwExtensions = glfw::glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    
+    // Check if the extensions needed by glfw are supported by Vulkan
+    auto extensionProperties = context.enumerateInstanceExtensionProperties();
+    for (auto i = 0u; i < glfwExtensionCount; ++i)
+    {
+        const auto res = std::ranges::none_of(extensionProperties,
+            [glfwExtension = glfwExtensions[i]](const auto& extensionProperty)
+            { 
+                return std::strcmp(extensionProperty.extensionName, glfwExtension) == 0; 
+            });
+        if (res)
+            throw std::runtime_error("Required GLFW extension not supported: " + std::string(glfwExtensions[i]));
+    }
+
     vk::ApplicationInfo appInfo{
         .pApplicationName = "Candela",
         .applicationVersion = vk::makeVersion(1, 0, 0),
@@ -26,28 +42,12 @@ void VulkanRenderer::init()
     };
 
     vk::InstanceCreateInfo createInfo{
-        .pApplicationInfo = &appInfo
+        .pApplicationInfo = &appInfo,
+        .enabledExtensionCount = glfwExtensionCount,
+        .ppEnabledExtensionNames = glfwExtensions
     };
-
-    // instance = vk::raii::Instance();
-    // Window
-
-    // Query extensions
-    std::uint32_t glfwExtensionCount{};
-    auto glfwExtensions = glfw::glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     
-    // Extensions supported by Vulkan?
-    // auto extensionProperties = context.enumerateInstanceExtensionProperties();
-    // for (auto i = 0u; i < glfwExtensionCount; ++i)
-    // {
-    //     const auto res = std::ranges::none_of(extensionProperties,
-    //         [glfwExtension = glfwExtensions[i]](const auto& extensionProperty)
-    //         { 
-    //             return std::strcmp(extensionProperty.extensionName, glfwExtension) == 0; 
-    //         });
-    //     if (res)
-    //         throw std::runtime_error("Required GLFW extension not supported: " + std::string(glfwExtensions[i]));
-    // }
+    instance = vk::raii::Instance(context, createInfo);
 }
 
 void VulkanRenderer::initWindow()
