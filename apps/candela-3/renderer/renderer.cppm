@@ -1,8 +1,11 @@
+module;
+
+#include "vkheader.h"
+
 export module candela.renderer;
 
 import std;
 import external.glfw;
-import vulkan;
 
 export namespace candela::renderer
 {
