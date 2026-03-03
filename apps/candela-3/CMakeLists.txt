@@ -11,7 +11,7 @@ add_custom_target(generate_version
 
 add_executable(candela-3)
 add_dependencies(candela-3 generate_version)
-target_link_libraries(candela-3 PRIVATE external core bfg::lyra)
+target_link_libraries(candela-3 PRIVATE external core bfg::lyra VulkanCppModule)
 
 target_sources(candela-3 PRIVATE 
     main.cpp 

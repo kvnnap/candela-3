@@ -12,13 +12,13 @@ add_library(external)
 target_link_libraries(external PRIVATE glfw)
 
 
-target_sources(external PUBLIC
-    FILE_SET public_headers TYPE HEADERS
-    BASE_DIRS
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    FILES
-        vkheader.h
-)
+# target_sources(external PUBLIC
+#     FILE_SET public_headers TYPE HEADERS
+#     BASE_DIRS
+#         ${CMAKE_CURRENT_SOURCE_DIR}
+#     FILES
+#         system/shared_library.h
+# )
 
 # target_sources(external PRIVATE
 #     configuration/configuration_node.cpp

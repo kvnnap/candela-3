@@ -1,7 +1,0 @@
-#pragma once
-
-#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS 1
-// #define VULKAN_HPP_CXX_MODULE_EXPERIMENTAL_WARNING 1
-
-#include "vulkan/vulkan_raii.hpp"
