@@ -28,9 +28,21 @@ export namespace candela::renderer
         std::optional<bool> processMessages();
         void cleanup();
     private:
+        std::vector<const char*> getRequiredInstanceExtensions();
+        std::vector<const char*> getRequiredLayers();
+        void setupDebugMessenger();
+
+        // static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
+        //                                               vk::DebugUtilsMessageTypeFlagsEXT              type,
+        //                                               const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
+        //                                               void *                                         pUserData);
+
         glfw::GLFWwindow* window;
 
         vk::raii::Context  context;
-        vk::raii::Instance instance = nullptr;
+        vk::raii::Instance instance;
+        vk::raii::DebugUtilsMessengerEXT debugMessenger;
+
+        bool enableValidationLayers;
     };
 }
