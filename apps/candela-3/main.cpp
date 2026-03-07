@@ -53,7 +53,7 @@ int main(int argc, const char * const * argv)
 
     } catch (const exception& e) 
     {
-        cerr << e.what() << endl;
+        cerr << "Exception: " << e.what() << endl;
         return -1;
     }
 

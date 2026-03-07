@@ -50,18 +50,33 @@ void VulkanRenderer::init()
     instance = vk::raii::Instance(context, createInfo);
 }
 
+static void handleGLFWError(int result)
+{
+    using namespace glfw;
+    if (result != glfw_false)
+        return;
+
+    const char* description {};
+    const auto code = glfwGetError(&description);
+    throw std::runtime_error("vulkan_renderer: glfwInit() failed, code: " 
+        + std::to_string(code) + ", description: " + std::string(description));
+    
+}
+
 void VulkanRenderer::initWindow()
 {
     using namespace glfw;
     constexpr unsigned WIDTH = 800;
     constexpr unsigned HEIGHT = 600;
 
-    glfwInit();
+    auto result = glfwInit();
+    handleGLFWError(result);
 
     glfwWindowHint(glfw_client_api, glfw_no_api);
     glfwWindowHint(glfw_resizable, glfw_false);
 
     window = glfwCreateWindow(WIDTH, HEIGHT, "Kevin", nullptr, nullptr);
+    handleGLFWError(window == nullptr ? glfw_false : glfw_true);
 }
 
 
@@ -75,9 +90,8 @@ std::optional<bool> VulkanRenderer::processMessages()
     using namespace glfw;
 
     int shouldClose {};
-    while (!(shouldClose = glfwWindowShouldClose(window))) {
+    while (!(shouldClose = glfwWindowShouldClose(window)))
         glfwPollEvents();
-    }
     return shouldClose;
 }
 
