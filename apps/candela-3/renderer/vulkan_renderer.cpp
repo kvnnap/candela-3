@@ -91,27 +91,28 @@ void VulkanRenderer::init()
     
     // Check if the extensions needed by glfw are supported by Vulkan
     auto extensionProperties = context.enumerateInstanceExtensionProperties();
-    for (auto i = 0u; i < requiredExtensions.size(); ++i)
+    for (std::string_view required : requiredExtensions)
     {
-        const auto res = std::ranges::none_of(extensionProperties,
-            [requiredExtension = requiredExtensions[i]](const auto& extensionProperty)
-            { 
-                return std::strcmp(extensionProperty.extensionName, requiredExtension) == 0; 
-            });
-        if (res)
-            throw std::runtime_error("Required extension not supported: " + std::string(requiredExtensions[i]));
+        if (!std::ranges::any_of(extensionProperties,
+            [&](auto& e){ return e.extensionName == required; }))
+        {
+            throw std::runtime_error(
+                std::format("Required extension not supported: {}", required));
+        }
     }
 
     // Check if the required layers are supported by the Vulkan implementation.
     auto requiredLayers = getRequiredLayers();
     auto layerProperties = context.enumerateInstanceLayerProperties();
-    auto unsupportedLayerIt = std::ranges::find_if(requiredLayers,
-                                                    [&layerProperties](auto const &requiredLayer) {
-                                                        return std::ranges::none_of(layerProperties,
-                                                                                    [requiredLayer](auto const &layerProperty) { return strcmp(layerProperty.layerName, requiredLayer) == 0; });
-                                                    });
-    if (unsupportedLayerIt != requiredLayers.end())
-        throw std::runtime_error("Required layer not supported: " + std::string(*unsupportedLayerIt));
+    for (std::string_view required : requiredLayers)
+    {
+        if (!std::ranges::any_of(layerProperties,
+            [&](const auto& layer) { return layer.layerName == required; }))
+        {
+            throw std::runtime_error(
+                std::format("Required layer not supported: {}", required));
+        }
+    }
 
     vk::ApplicationInfo appInfo{
         .pApplicationName = "Candela",
