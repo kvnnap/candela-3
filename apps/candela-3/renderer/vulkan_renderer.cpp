@@ -10,7 +10,11 @@ module candela.renderer;
 using candela::renderer::VulkanRenderer;
 
 VulkanRenderer::VulkanRenderer()
-    : window(), instance(nullptr), debugMessenger(nullptr), enableValidationLayers()
+    : window(), 
+      instance(nullptr),
+      debugMessenger(nullptr),
+      physicalDevice(nullptr),
+      enableValidationLayers()
 {
     // init();
     #ifdef NDEBUG
@@ -84,6 +88,54 @@ void VulkanRenderer::setupDebugMessenger()
     debugMessenger = instance.createDebugUtilsMessengerEXT( debugUtilsMessengerCreateInfoEXT );
 }
 
+void VulkanRenderer::pickPhysicalDevice()
+{
+    std::vector<const char*> requiredDeviceExtension = {vk::KHRSwapchainExtensionName};
+
+    auto physicalDevices = instance.enumeratePhysicalDevices();
+    if (physicalDevices.empty())
+        throw std::runtime_error("Failed to find GPUs with Vulkan Support!");
+    for (auto &phyDevice : physicalDevices)
+    {
+        auto props = phyDevice.getProperties();
+        
+        auto apiVersion = std::format("{}.{}.{}", vk::apiVersionMajor(props.apiVersion), vk::apiVersionMinor(props.apiVersion), vk::apiVersionPatch(props.apiVersion));
+        std::cout << std::format("Device name: {}, Api Version: {}", props.deviceName.data(), apiVersion) << std::endl;
+
+        auto queueFamilies = phyDevice.getQueueFamilyProperties();
+        bool supportGraphics = std::ranges::any_of(queueFamilies, [](auto const &qfp) { return static_cast<bool>(qfp.queueFlags & vk::QueueFlagBits::eGraphics); });
+        if (!supportGraphics)
+            continue;
+
+        auto availableDevExtensions = phyDevice.enumerateDeviceExtensionProperties();
+        bool supportsAllRequiredExtensions =
+        std::ranges::all_of( requiredDeviceExtension,
+            [&availableDevExtensions]( auto const & requiredDeviceExtension )
+            {
+                return std::ranges::any_of( availableDevExtensions,
+                                            [requiredDeviceExtension]( auto const & availableDeviceExtension )
+                                            { return strcmp( availableDeviceExtension.extensionName, requiredDeviceExtension ) == 0; } );
+            } 
+        );
+
+        if (!supportsAllRequiredExtensions)
+            continue;
+
+        auto features = phyDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+        bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
+                                        features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+                                
+        if (!supportsRequiredFeatures)
+            continue;
+
+        physicalDevice = phyDevice;
+        break;
+    }
+
+    if (physicalDevice == nullptr)
+        throw std::runtime_error("No compatible device found");
+}
+
 void VulkanRenderer::init()
 {
     // Query the extensions needed by GLFW
@@ -140,6 +192,7 @@ void VulkanRenderer::init()
     }
 
     setupDebugMessenger();
+    pickPhysicalDevice();
 }
 
 static void handleGLFWError(int result)
