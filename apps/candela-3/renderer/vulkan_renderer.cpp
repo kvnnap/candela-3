@@ -18,6 +18,9 @@ VulkanRenderer::VulkanRenderer()
       device(nullptr),
       graphicsQueue(nullptr),
       surface(nullptr),
+      swapChain(nullptr),
+      swapChainExtent(),
+      swapChainSurfaceFormat(),
       enableValidationLayers()
 {
     // init();
@@ -101,11 +104,7 @@ void VulkanRenderer::pickPhysicalDevice()
         throw std::runtime_error("Failed to find GPUs with Vulkan Support!");
     for (auto &phyDevice : physicalDevices)
     {
-        auto props = phyDevice.getProperties();
         
-        auto apiVersion = std::format("{}.{}.{}", vk::apiVersionMajor(props.apiVersion), vk::apiVersionMinor(props.apiVersion), vk::apiVersionPatch(props.apiVersion));
-        std::cout << std::format("Device name: {}, Api Version: {}", props.deviceName.data(), apiVersion) << std::endl;
-
         auto queueFamilies = phyDevice.getQueueFamilyProperties();
         bool supportGraphics{};
         for(auto i = 0u; i < queueFamilies.size(); ++i)
@@ -143,6 +142,9 @@ void VulkanRenderer::pickPhysicalDevice()
             continue;
 
         physicalDevice = phyDevice;
+        auto props = phyDevice.getProperties();
+        auto apiVersion = std::format("{}.{}.{}", vk::apiVersionMajor(props.apiVersion), vk::apiVersionMinor(props.apiVersion), vk::apiVersionPatch(props.apiVersion));
+        std::cout << std::format("Device name: {}, Api Version: {}", props.deviceName.data(), apiVersion) << std::endl;
         break;
     }
 
@@ -205,6 +207,80 @@ void VulkanRenderer::createSurface()
     surface = vk::raii::SurfaceKHR(instance, _surface);
 }
 
+void VulkanRenderer::createSwapChain()
+{
+    auto surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
+    auto availableFormats = physicalDevice.getSurfaceFormatsKHR(surface);
+    auto availablePresentModes = physicalDevice.getSurfacePresentModesKHR(surface);
+
+    const auto formatIt = std::ranges::find_if(
+        availableFormats,
+        [](const auto &format) { return format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear; });
+    
+    swapChainSurfaceFormat = *formatIt;
+    auto presentMode = std::ranges::any_of(availablePresentModes, [](const auto& value){ return value == vk::PresentModeKHR::eMailbox; }) ?
+                        vk::PresentModeKHR::eMailbox : vk::PresentModeKHR::eFifo;
+
+    // Get window buffer size in pixels (there are other logical units)
+    auto &extent = swapChainExtent;
+    extent = surfaceCapabilities.currentExtent;
+    if (surfaceCapabilities.currentExtent.width == std::numeric_limits<std::uint32_t>::max())
+    {
+        int width, height;
+        glfw::glfwGetFramebufferSize(window, &width, &height);
+        extent.width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+        extent.height = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+    }
+
+    // To reduce any waiting, use +1
+    auto minImageCount = surfaceCapabilities.minImageCount < surfaceCapabilities.maxImageCount ? surfaceCapabilities.minImageCount + 1 : surfaceCapabilities.minImageCount;
+
+    // Create swap chain
+    vk::SwapchainCreateInfoKHR swapChainCreateInfo {
+        .surface          = *surface,
+        .minImageCount    = minImageCount,
+        .imageFormat      = swapChainSurfaceFormat.format,
+        .imageColorSpace  = swapChainSurfaceFormat.colorSpace,
+        .imageExtent      = extent,
+        .imageArrayLayers = 1, // Always 1 unless sterescope 3d app
+        .imageUsage       = vk::ImageUsageFlagBits::eColorAttachment,
+        .imageSharingMode = vk::SharingMode::eExclusive,
+        .preTransform     = surfaceCapabilities.currentTransform,
+        .compositeAlpha   = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+        .presentMode      = presentMode,
+        .clipped          = true,
+        .oldSwapchain = nullptr
+    };
+
+    swapChain = vk::raii::SwapchainKHR(device, swapChainCreateInfo);
+    swapChainImages = swapChain.getImages();
+}
+
+void VulkanRenderer::createImageViews()
+{
+    // assert(swapChainImageViews.empty());
+    vk::ImageViewCreateInfo imageViewCreateInfo{ .viewType         = vk::ImageViewType::e2D,
+                                                 .format           = swapChainSurfaceFormat.format,
+                                                 .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } };
+    imageViewCreateInfo.components = {
+        vk::ComponentSwizzle::eIdentity,
+        vk::ComponentSwizzle::eIdentity,
+        vk::ComponentSwizzle::eIdentity,
+        vk::ComponentSwizzle::eIdentity
+    };
+    imageViewCreateInfo.subresourceRange = {
+        .aspectMask = vk::ImageAspectFlagBits::eColor,
+        .levelCount = 1,
+        .layerCount = 1
+    };
+
+    for (auto &image : swapChainImages)
+    {
+        imageViewCreateInfo.image = image;
+        swapChainImageViews.emplace_back(device, imageViewCreateInfo);
+    }
+}
+
 void VulkanRenderer::init()
 {
     // Query the extensions needed by GLFW
@@ -264,6 +340,8 @@ void VulkanRenderer::init()
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
+    createSwapChain();
+    createImageViews();
 }
 
 static void handleGLFWError(int result)

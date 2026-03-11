@@ -34,6 +34,8 @@ export namespace candela::renderer
         void pickPhysicalDevice();
         void createLogicalDevice();
         void createSurface();
+        void createSwapChain();
+        void createImageViews();
 
 
         // static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
@@ -50,6 +52,11 @@ export namespace candela::renderer
         vk::raii::Device device;
         vk::raii::Queue graphicsQueue;
         vk::raii::SurfaceKHR surface;
+        vk::raii::SwapchainKHR swapChain;
+        std::vector<vk::Image> swapChainImages;
+        vk::Extent2D swapChainExtent;
+        vk::SurfaceFormatKHR swapChainSurfaceFormat;
+        std::vector<vk::raii::ImageView> swapChainImageViews;
 
         bool enableValidationLayers;
     };
