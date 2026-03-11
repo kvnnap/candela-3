@@ -1,5 +1,6 @@
 module;
 
+// Used for vkDebugCallback
 #include "vulkan/vk_platform.h"
 
 module candela.renderer;
@@ -14,6 +15,9 @@ VulkanRenderer::VulkanRenderer()
       instance(nullptr),
       debugMessenger(nullptr),
       physicalDevice(nullptr),
+      device(nullptr),
+      graphicsQueue(nullptr),
+      surface(nullptr),
       enableValidationLayers()
 {
     // init();
@@ -103,20 +107,30 @@ void VulkanRenderer::pickPhysicalDevice()
         std::cout << std::format("Device name: {}, Api Version: {}", props.deviceName.data(), apiVersion) << std::endl;
 
         auto queueFamilies = phyDevice.getQueueFamilyProperties();
-        bool supportGraphics = std::ranges::any_of(queueFamilies, [](auto const &qfp) { return static_cast<bool>(qfp.queueFlags & vk::QueueFlagBits::eGraphics); });
+        bool supportGraphics{};
+        for(auto i = 0u; i < queueFamilies.size(); ++i)
+        {
+            const auto& qfp = queueFamilies[i];
+            if (static_cast<bool>(qfp.queueFlags & vk::QueueFlagBits::eGraphics) && phyDevice.getSurfaceSupportKHR(i, surface))
+            {
+                supportGraphics = true;
+                break;
+            }
+        }
+
         if (!supportGraphics)
             continue;
 
         auto availableDevExtensions = phyDevice.enumerateDeviceExtensionProperties();
         bool supportsAllRequiredExtensions =
-        std::ranges::all_of( requiredDeviceExtension,
+            std::ranges::all_of( requiredDeviceExtension,
             [&availableDevExtensions]( auto const & requiredDeviceExtension )
             {
                 return std::ranges::any_of( availableDevExtensions,
                                             [requiredDeviceExtension]( auto const & availableDeviceExtension )
-                                            { return strcmp( availableDeviceExtension.extensionName, requiredDeviceExtension ) == 0; } );
+                                            { return std::string_view(availableDeviceExtension.extensionName) == requiredDeviceExtension; } );
             } 
-        );
+            );
 
         if (!supportsAllRequiredExtensions)
             continue;
@@ -134,6 +148,61 @@ void VulkanRenderer::pickPhysicalDevice()
 
     if (physicalDevice == nullptr)
         throw std::runtime_error("No compatible device found");
+}
+
+void VulkanRenderer::createLogicalDevice()
+{
+    auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+
+    std::uint32_t queueIndex;
+    for(queueIndex = 0u; queueIndex < queueFamilyProperties.size(); ++queueIndex)
+    {
+        const auto& qfp = queueFamilyProperties[queueIndex];
+        if (static_cast<bool>(qfp.queueFlags & vk::QueueFlagBits::eGraphics) && physicalDevice.getSurfaceSupportKHR(queueIndex, surface))
+            break;
+    }
+    if (queueIndex == queueFamilyProperties.size())
+        throw std::runtime_error("Could not find a queue for graphics and present -> terminating");
+
+    const float prio = 0.5f;
+    vk::DeviceQueueCreateInfo deviceQueueCreateInfo { 
+        .queueFamilyIndex = queueIndex,
+        .queueCount = 1,
+        .pQueuePriorities = &prio
+    };
+
+    vk::PhysicalDeviceFeatures deviceFeatures;
+
+    // these are the features we queried for earlier when picking the device.
+    // It's a chain PhysicalDeviceFeatures2 -> PhysicalDeviceVulkan13Features -> PhysicalDeviceExtendedDynamicStateFeaturesEXT
+    // Driver enables featueres in all these structs
+    vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain = {
+        {},                               // vk::PhysicalDeviceFeatures2 (empty for now)
+        {.dynamicRendering = true },      // Enable dynamic rendering from Vulkan 1.3
+        {.extendedDynamicState = true }   // Enable extended dynamic state from the extension
+    };
+
+    // We didnt check for this earlier? not sure
+    std::vector<const char*> requiredDeviceExtension = { vk::KHRSwapchainExtensionName };
+
+    vk::DeviceCreateInfo deviceCreateInfo {
+        .pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &deviceQueueCreateInfo,
+        .enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtension.size()),
+        .ppEnabledExtensionNames = requiredDeviceExtension.data()
+    };
+
+    device = vk::raii::Device(physicalDevice, deviceCreateInfo);
+    graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
+}
+
+void VulkanRenderer::createSurface()
+{
+    vk::raii::SurfaceKHR::CType _surface{nullptr};
+    if (glfw::glfwCreateWindowSurface(*instance, window, nullptr, &_surface) != 0)
+        throw std::runtime_error("failed to create window surface!");
+    surface = vk::raii::SurfaceKHR(instance, _surface);
 }
 
 void VulkanRenderer::init()
@@ -192,7 +261,9 @@ void VulkanRenderer::init()
     }
 
     setupDebugMessenger();
+    createSurface();
     pickPhysicalDevice();
+    createLogicalDevice();
 }
 
 static void handleGLFWError(int result)

@@ -32,6 +32,8 @@ export namespace candela::renderer
         std::vector<const char*> getRequiredLayers();
         void setupDebugMessenger();
         void pickPhysicalDevice();
+        void createLogicalDevice();
+        void createSurface();
 
 
         // static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
@@ -45,6 +47,9 @@ export namespace candela::renderer
         vk::raii::Instance instance;
         vk::raii::DebugUtilsMessengerEXT debugMessenger;
         vk::raii::PhysicalDevice physicalDevice;
+        vk::raii::Device device;
+        vk::raii::Queue graphicsQueue;
+        vk::raii::SurfaceKHR surface;
 
         bool enableValidationLayers;
     };
