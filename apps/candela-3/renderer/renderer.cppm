@@ -36,6 +36,7 @@ export namespace candela::renderer
         void createSurface();
         void createSwapChain();
         void createImageViews();
+        void createGraphicsPipeline();
 
 
         // static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,

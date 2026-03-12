@@ -3,6 +3,7 @@
     "rapidjson",
     "bfgroup-lyra",
     "glfw3",
-    "vulkan"
+    "vulkan",
+    "shader-slang"
   ]
 }

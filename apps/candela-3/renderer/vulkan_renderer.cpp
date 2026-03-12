@@ -281,6 +281,11 @@ void VulkanRenderer::createImageViews()
     }
 }
 
+void VulkanRenderer::createGraphicsPipeline()
+{
+    
+}
+
 void VulkanRenderer::init()
 {
     // Query the extensions needed by GLFW

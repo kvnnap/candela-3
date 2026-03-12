@@ -50,6 +50,53 @@ install(TARGETS candela-3
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
+find_program(SLANGC_EXECUTABLE NAMES slangc REQUIRED)
+
+function (add_slang_shader_target TARGET)
+    # Parse ARGN
+    set(multiValueArgs SOURCES ENTRY_POINTS)
+    cmake_parse_arguments ("SHADER" "" "OUTPUT" "${multiValueArgs}" ${ARGN})
+
+    # Argument validation
+    if(NOT SHADER_SOURCES)
+        message(FATAL_ERROR "add_slang_shader_target: SOURCES is required")
+    endif()
+
+    if(NOT SHADER_ENTRY_POINTS)
+        set(SHADER_ENTRY_POINTS vertMain fragMain)
+    endif()
+
+    if(NOT SHADER_OUTPUT)
+        set(SHADER_OUTPUT "${TARGET}.spv")
+    endif()
+
+    set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
+    set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+    set(OUTPUT_FILE "${SHADER_OUTPUT_DIR}/${SHADER_OUTPUT}")
+
+    foreach(src IN LISTS SHADER_SOURCES)
+        list(APPEND SHADER_ABS_SOURCES "${SHADER_SOURCE_DIR}/${src}")
+    endforeach()
+
+    foreach(ep IN LISTS SHADER_ENTRY_POINTS)
+        list(APPEND SHADER_EPS -entry "${ep}")
+    endforeach()
+
+    add_custom_command(
+        OUTPUT  ${OUTPUT_FILE}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUTPUT_DIR}
+        COMMAND ${SLANGC_EXECUTABLE} ${SHADER_SOURCES} -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name ${SHADER_EPS} -o ${OUTPUT_FILE}
+        DEPENDS ${SHADER_ABS_SOURCES}
+        WORKING_DIRECTORY ${SHADER_SOURCE_DIR}
+        COMMENT "Compiling Slang shaders -> ${OUTPUT_FILE}"
+        VERBATIM
+    )
+    add_custom_target (${TARGET} DEPENDS ${OUTPUT_FILE})
+endfunction()
+
+add_slang_shader_target(shaders SOURCES shader.slang)
+add_dependencies(candela-3 shaders)
+
 # Install any pdb files (Windows)
 # if(MSVC)
 # 	install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
