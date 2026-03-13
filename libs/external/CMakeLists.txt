@@ -13,11 +13,10 @@ add_library(external)
 #     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 # )
 
-install(IMPORTED_RUNTIME_ARTIFACTS glfw
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
+# install(IMPORTED_RUNTIME_ARTIFACTS glfw
+#     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+# )
 
 # target_link_libraries(external PRIVATE cxxopts::cxxopts)
 # target_link_libraries(external PRIVATE CLI11::CLI11 bfg::lyra)

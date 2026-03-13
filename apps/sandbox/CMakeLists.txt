@@ -30,3 +30,10 @@ target_compile_options(candela-sandbox PRIVATE
 	$<$<CXX_COMPILER_ID:MSVC>:/W4> # Should add /WX too
 	$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -pedantic>
 )
+
+install(TARGETS candela-sandbox 
+    RUNTIME_DEPENDENCY_SET candela_runtime
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)

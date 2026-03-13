@@ -14,6 +14,21 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(candela-solution)
 
+# The dependency set can be used by all relatable 
+install(RUNTIME_DEPENDENCY_SET candela_runtime
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+  PRE_EXCLUDE_REGEXES
+  [=[api-ms-]=]
+  [=[ext-ms-]=]
+  [[kernel32\.dll]]
+  [[libc\.so\..*]] [[libgcc_s\.so\..*]] [[libm\.so\..*]] [[libstdc\+\+\.so\..*]]
+  POST_EXCLUDE_REGEXES
+  [=[.*system32\/.*\.dll]=]
+  [=[^\/(lib|usr\/lib|usr\/local\/lib)]=]
+  # DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS} $<TARGET_FILE_DIR:betaimpl>
+  DIRECTORIES C:\\toolchains\\llvm-mingw-20251216-ucrt-x86_64\\bin
+)
+
 add_subdirectory(libs/external)
 add_subdirectory(libs/core)
 add_subdirectory(apps/candela-3)
