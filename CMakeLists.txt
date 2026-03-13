@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 4.0.3...4.2.3)
 
+include(GNUInstallDirs)
+
 # Set experimental flag to enable `import std` support from CMake.
 # This must be enabled before C++ language support.
 set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD
