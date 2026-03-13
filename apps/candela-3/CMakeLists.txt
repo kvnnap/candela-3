@@ -44,11 +44,15 @@ target_compile_options(candela-3 PRIVATE
 
 # Install Candela-3
 install(TARGETS candela-3 
-    # EXPORT candela-3-export
+    # RUNTIME_DEPENDENCY_SET candela_runtime
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+# install(RUNTIME_DEPENDENCY_SET candela_runtime
+#     DESTINATION ${CMAKE_INSTALL_BINDIR}
+# )
 
 find_program(SLANGC_EXECUTABLE NAMES slangc REQUIRED)
 

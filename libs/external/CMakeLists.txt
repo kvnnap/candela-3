@@ -7,6 +7,18 @@ find_package(glfw3 CONFIG REQUIRED)
 
 add_library(external)
 
+# install(TARGETS external 
+#     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+# )
+
+install(IMPORTED_RUNTIME_ARTIFACTS glfw
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+
 # target_link_libraries(external PRIVATE cxxopts::cxxopts)
 # target_link_libraries(external PRIVATE CLI11::CLI11 bfg::lyra)
 target_link_libraries(external PRIVATE glfw)
