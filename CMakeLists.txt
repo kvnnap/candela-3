@@ -18,13 +18,15 @@ project(candela-solution)
 install(RUNTIME_DEPENDENCY_SET candela_runtime
   DESTINATION ${CMAKE_INSTALL_BINDIR}
   PRE_EXCLUDE_REGEXES
-  [=[api-ms-]=]
-  [=[ext-ms-]=]
-  [[kernel32\.dll]]
-  [[libc\.so\..*]] [[libgcc_s\.so\..*]] [[libm\.so\..*]] [[libstdc\+\+\.so\..*]]
+    [[api-ms-]]
+    [[ext-ms-]]
+    [[kernel32\.dll]]
+    [[vulkan-1\.dll]]
+    [[libvulkan\.so(\..*)?]]
+    [[libc\.so(\..*)?]] [[libgcc_s\.so(\..*)?]] [[libm\.so(\..*)?]] [[libstdc\+\+\.so(\..*)?]]
   POST_EXCLUDE_REGEXES
-  [=[.*system32\/.*\.dll]=]
-  [=[^\/(lib|usr\/lib|usr\/local\/lib)]=]
+    [[.*system32\/.*\.dll]]
+    [[^\/(lib|usr\/lib|usr\/local\/lib)]]
   # DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS} $<TARGET_FILE_DIR:betaimpl>
   DIRECTORIES C:\\toolchains\\llvm-mingw-20251216-ucrt-x86_64\\bin
 )
