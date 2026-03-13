@@ -80,6 +80,7 @@ function (add_slang_shader_target TARGET)
     set(SHADER_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_DIR_NAME}")
     set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/${SHADER_DIR_NAME}")
     set(OUTPUT_FILE "${SHADER_OUTPUT_DIR}/${SHADER_OUTPUT}")
+    set(DEP_FILE "${OUTPUT_FILE}.dep")
 
     foreach(src IN LISTS SHADER_SOURCES)
         list(APPEND SHADER_ABS_SOURCES "${SHADER_SOURCE_DIR}/${src}")
@@ -92,8 +93,9 @@ function (add_slang_shader_target TARGET)
     add_custom_command(
         OUTPUT  "${OUTPUT_FILE}"
         COMMAND "${CMAKE_COMMAND}" -E make_directory "${SHADER_OUTPUT_DIR}"
-        COMMAND "${SLANGC_EXECUTABLE}" ${SHADER_SOURCES} -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name ${SHADER_EPS} -o "${OUTPUT_FILE}"
+        COMMAND "${SLANGC_EXECUTABLE}" ${SHADER_SOURCES} -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name ${SHADER_EPS} -o "${OUTPUT_FILE}" -depfile "${DEP_FILE}"
         DEPENDS ${SHADER_ABS_SOURCES}
+        DEPFILE "${DEP_FILE}"
         WORKING_DIRECTORY "${SHADER_SOURCE_DIR}"
         COMMENT "Compiling Slang shaders -> ${OUTPUT_FILE}"
         VERBATIM
