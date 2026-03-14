@@ -36,7 +36,9 @@ export namespace candela::renderer
         void createSurface();
         void createSwapChain();
         void createImageViews();
+        vk::raii::ShaderModule createShaderModule(const std::vector<std::byte>& code);
         void createGraphicsPipeline();
+        
 
 
         // static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
@@ -58,6 +60,8 @@ export namespace candela::renderer
         vk::Extent2D swapChainExtent;
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
         std::vector<vk::raii::ImageView> swapChainImageViews;
+        vk::raii::PipelineLayout pipelineLayout;
+        vk::raii::Pipeline graphicsPipeline;
 
         bool enableValidationLayers;
     };

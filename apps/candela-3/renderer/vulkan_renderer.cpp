@@ -21,7 +21,10 @@ VulkanRenderer::VulkanRenderer()
       swapChain(nullptr),
       swapChainExtent(),
       swapChainSurfaceFormat(),
+      pipelineLayout(nullptr),
+      graphicsPipeline(nullptr),
       enableValidationLayers()
+
 {
     // init();
     #ifdef NDEBUG
@@ -134,8 +137,9 @@ void VulkanRenderer::pickPhysicalDevice()
         if (!supportsAllRequiredExtensions)
             continue;
 
-        auto features = phyDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+        auto features = phyDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
         bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
+                                        features.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
                                         features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
                                 
         if (!supportsRequiredFeatures)
@@ -178,8 +182,9 @@ void VulkanRenderer::createLogicalDevice()
     // these are the features we queried for earlier when picking the device.
     // It's a chain PhysicalDeviceFeatures2 -> PhysicalDeviceVulkan13Features -> PhysicalDeviceExtendedDynamicStateFeaturesEXT
     // Driver enables featueres in all these structs
-    vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain = {
+    vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain = {
         {},                               // vk::PhysicalDeviceFeatures2 (empty for now)
+        {.shaderDrawParameters = true },      // Enable shaderDrawParameters rendering from Vulkan 1.1
         {.dynamicRendering = true },      // Enable dynamic rendering from Vulkan 1.3
         {.extendedDynamicState = true }   // Enable extended dynamic state from the extension
     };
@@ -281,9 +286,100 @@ void VulkanRenderer::createImageViews()
     }
 }
 
+static std::vector<std::byte> loadBlob(const std::string& path)
+{
+    std::vector<std::byte> buffer(std::filesystem::file_size(path));
+    std::ifstream file(path, std::ios::binary);
+    if (!file)
+        throw std::runtime_error("failed to open file: " + path);
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), buffer.size()))
+        throw std::runtime_error("failed to read file: " + path);
+    return buffer;
+}
+
+vk::raii::ShaderModule VulkanRenderer::createShaderModule(const std::vector<std::byte>& code)
+{
+    vk::ShaderModuleCreateInfo createInfo{ 
+        .codeSize = code.size() * sizeof(std::byte), 
+        .pCode = reinterpret_cast<const uint32_t*>(code.data()) 
+    };
+    return { device, createInfo };
+}
+
 void VulkanRenderer::createGraphicsPipeline()
 {
-    
+    // Load shader
+    auto code = loadBlob("shaders/shaders.spv");
+    auto shaderModule = createShaderModule(code);
+    vk::PipelineShaderStageCreateInfo vertShaderStageInfo { 
+        .stage = vk::ShaderStageFlagBits::eVertex, 
+        .module = shaderModule,
+        .pName = "vertMain",
+        .pSpecializationInfo = nullptr // For specifying constants at pipeline build time
+    };
+
+    vk::PipelineShaderStageCreateInfo fragShaderStageInfo{ 
+        .stage = vk::ShaderStageFlagBits::eFragment, 
+        .module = shaderModule, 
+        .pName = "fragMain" 
+    };
+
+    vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+    vk::PipelineInputAssemblyStateCreateInfo inputAssembly{  .topology = vk::PrimitiveTopology::eTriangleList };
+    vk::Viewport { 0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f };
+    vk::Rect2D { vk::Offset2D{ 0, 0 }, swapChainExtent };
+
+    std::vector dynamicStates = {
+        vk::DynamicState::eViewport,
+        vk::DynamicState::eScissor
+    };
+    vk::PipelineDynamicStateCreateInfo dynamicState{ .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()), .pDynamicStates = dynamicStates.data() };
+
+    // vk::PipelineViewportStateCreateInfo viewportState({}, 1, {}, 1);
+    vk::PipelineViewportStateCreateInfo viewportState{ .viewportCount = 1, .scissorCount = 1 };
+
+    vk::PipelineRasterizationStateCreateInfo rasterizer{  
+        .depthClampEnable = vk::False, 
+        .rasterizerDiscardEnable = vk::False,
+        .polygonMode = vk::PolygonMode::eFill, .cullMode = vk::CullModeFlagBits::eBack,
+        .frontFace = vk::FrontFace::eClockwise, .depthBiasEnable = vk::False,
+        .depthBiasSlopeFactor = 1.0f, .lineWidth = 1.0f 
+    };
+
+    vk::PipelineColorBlendAttachmentState colorBlendAttachment{
+        .blendEnable    = vk::False,
+        .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
+    };
+    vk::PipelineColorBlendStateCreateInfo colorBlending {
+        .logicOpEnable = vk::False, 
+        .logicOp =  vk::LogicOp::eCopy, 
+        .attachmentCount = 1, 
+        .pAttachments =  &colorBlendAttachment 
+    };
+
+    vk::PipelineMultisampleStateCreateInfo multisampling{.rasterizationSamples = vk::SampleCountFlagBits::e1, .sampleShadingEnable = vk::False};
+
+    // Uniforms
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{  .setLayoutCount = 0, .pushConstantRangeCount = 0 };
+    pipelineLayout = vk::raii::PipelineLayout( device, pipelineLayoutInfo );
+
+    // Dynamic rendering
+    vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo{ .colorAttachmentCount = 1, .pColorAttachmentFormats = &swapChainSurfaceFormat.format };
+
+    vk::GraphicsPipelineCreateInfo pipelineInfo{ 
+        .pNext = &pipelineRenderingCreateInfo, // This structure specifies the formats of the attachments that will be used during rendering
+        .stageCount = 2, .pStages = shaderStages,
+        .pVertexInputState = &vertexInputInfo, .pInputAssemblyState = &inputAssembly,
+        .pViewportState = &viewportState, .pRasterizationState = &rasterizer,
+        .pMultisampleState = &multisampling, .pColorBlendState = &colorBlending,
+        .pDynamicState = &dynamicState, 
+        .layout = pipelineLayout, // The fixed layout
+        .renderPass = nullptr // null because we're using dynamic rendering
+    };
+
+    graphicsPipeline = vk::raii::Pipeline(device, nullptr, pipelineInfo);
 }
 
 void VulkanRenderer::init()
@@ -347,6 +443,7 @@ void VulkanRenderer::init()
     createLogicalDevice();
     createSwapChain();
     createImageViews();
+    createGraphicsPipeline();
 }
 
 static void handleGLFWError(int result)
@@ -359,7 +456,6 @@ static void handleGLFWError(int result)
     const auto code = glfwGetError(&description);
     throw std::runtime_error("vulkan_renderer: glfwInit() failed, code: " 
         + std::to_string(code) + ", description: " + std::string(description));
-    
 }
 
 void VulkanRenderer::initWindow()
