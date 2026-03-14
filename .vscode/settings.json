@@ -1,4 +1,7 @@
 {
+    "clangd.arguments": [
+        "--header-insertion=never"
+    ],
     "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
     "editor.inlayHints.enabled": "offUnlessPressed"
 }

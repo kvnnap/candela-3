@@ -39,14 +39,12 @@ int main(int argc, const char * const * argv)
         vk.initWindow();
         vk.init();
 
-        std::optional<int> exitCode;
         while(true)
         {
             // run window message loop
-
-            exitCode = vk.processMessages();
-            if (exitCode)
+            if (vk.processMessages())
                 break;
+            vk.renderFrame();
         }
         
         vk.cleanup();

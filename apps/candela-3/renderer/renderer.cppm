@@ -25,7 +25,7 @@ export namespace candela::renderer
         void renderFrame() override;
 
         void initWindow();
-        std::optional<bool> processMessages();
+        bool processMessages();
         void cleanup();
     private:
         std::vector<const char*> getRequiredInstanceExtensions();
@@ -38,8 +38,13 @@ export namespace candela::renderer
         void createImageViews();
         vk::raii::ShaderModule createShaderModule(const std::vector<std::byte>& code);
         void createGraphicsPipeline();
+        void createCommandPool();
+        void createCommandBuffer();
+        void transitionImageLayout(std::uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask);
         
+        void recordCommandBuffer(std::uint32_t imageIndex);
 
+        void createSyncObjects();
 
         // static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
         //                                               vk::DebugUtilsMessageTypeFlagsEXT              type,
@@ -54,6 +59,7 @@ export namespace candela::renderer
         vk::raii::PhysicalDevice physicalDevice;
         vk::raii::Device device;
         vk::raii::Queue graphicsQueue;
+        std::uint32_t graphicsQueueFamilyIndex;
         vk::raii::SurfaceKHR surface;
         vk::raii::SwapchainKHR swapChain;
         std::vector<vk::Image> swapChainImages;
@@ -63,6 +69,19 @@ export namespace candela::renderer
         vk::raii::PipelineLayout pipelineLayout;
         vk::raii::Pipeline graphicsPipeline;
 
-        bool enableValidationLayers;
+        vk::raii::CommandPool commandPool;
+        vk::raii::CommandBuffer commandBuffer;
+
+        vk::raii::Semaphore presentCompleteSemaphore;
+        // vk::raii::Semaphore renderFinishedSemaphore;
+        std::vector<vk::raii::Semaphore> renderFinishedSemaphores;
+        vk::raii::Fence drawFence;
+
+        // static constexpr bool enableValidationLayers;
+        #ifdef NDEBUG
+        static constexpr bool enableValidationLayers = false;
+        #else
+        static constexpr bool enableValidationLayers = true;
+        #endif
     };
 }

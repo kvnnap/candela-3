@@ -16,22 +16,17 @@ VulkanRenderer::VulkanRenderer()
       debugMessenger(nullptr),
       physicalDevice(nullptr),
       device(nullptr),
-      graphicsQueue(nullptr),
+      graphicsQueue(nullptr), graphicsQueueFamilyIndex(),
       surface(nullptr),
       swapChain(nullptr),
       swapChainExtent(),
       swapChainSurfaceFormat(),
       pipelineLayout(nullptr),
       graphicsPipeline(nullptr),
-      enableValidationLayers()
-
+      commandPool(nullptr), commandBuffer(nullptr),
+      presentCompleteSemaphore(nullptr), drawFence(nullptr)
 {
     // init();
-    #ifdef NDEBUG
-    enableValidationLayers = false;
-    #else
-    enableValidationLayers = true;
-    #endif
 }
 
 VulkanRenderer::~VulkanRenderer()
@@ -59,7 +54,7 @@ std::vector<const char*> VulkanRenderer::getRequiredInstanceExtensions()
     auto glfwExtensions = glfw::glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
     std::vector extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-    if (enableValidationLayers)
+    if constexpr(enableValidationLayers)
     {
         extensions.push_back(vk::EXTDebugUtilsExtensionName);
     }
@@ -76,7 +71,7 @@ std::vector<const char*> VulkanRenderer::getRequiredLayers()
     
     // Get the required layers
     std::vector<char const*> requiredLayers;
-    if (enableValidationLayers)
+    if constexpr(enableValidationLayers)
     {
         requiredLayers.assign(validationLayers.begin(), validationLayers.end());
     }
@@ -86,16 +81,18 @@ std::vector<const char*> VulkanRenderer::getRequiredLayers()
 
 void VulkanRenderer::setupDebugMessenger()
 {
-    if (!enableValidationLayers) return;
-    vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+    if constexpr(enableValidationLayers) 
+    {
+        vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
                                                         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
                                                         vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-    vk::DebugUtilsMessageTypeFlagsEXT     messageTypeFlags(
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
-    vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT{.messageSeverity = severityFlags,
-                                                                          .messageType     = messageTypeFlags,
-                                                                          .pfnUserCallback = &vkDebugCallback};
-    debugMessenger = instance.createDebugUtilsMessengerEXT( debugUtilsMessengerCreateInfoEXT );
+        vk::DebugUtilsMessageTypeFlagsEXT     messageTypeFlags(
+                vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+        vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT{.messageSeverity = severityFlags,
+                                                                            .messageType     = messageTypeFlags,
+                                                                            .pfnUserCallback = &vkDebugCallback};
+        debugMessenger = instance.createDebugUtilsMessengerEXT( debugUtilsMessengerCreateInfoEXT );
+    }
 }
 
 void VulkanRenderer::pickPhysicalDevice()
@@ -138,7 +135,8 @@ void VulkanRenderer::pickPhysicalDevice()
             continue;
 
         auto features = phyDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
-        bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
+        const auto& pdv13features = features.get<vk::PhysicalDeviceVulkan13Features>();
+        bool supportsRequiredFeatures = pdv13features.dynamicRendering && pdv13features.synchronization2 &&
                                         features.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
                                         features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
                                 
@@ -185,7 +183,7 @@ void VulkanRenderer::createLogicalDevice()
     vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain = {
         {},                               // vk::PhysicalDeviceFeatures2 (empty for now)
         {.shaderDrawParameters = true },      // Enable shaderDrawParameters rendering from Vulkan 1.1
-        {.dynamicRendering = true },      // Enable dynamic rendering from Vulkan 1.3
+        {.synchronization2 = true, .dynamicRendering = true },      // Enable dynamic rendering and sync from Vulkan 1.3
         {.extendedDynamicState = true }   // Enable extended dynamic state from the extension
     };
 
@@ -202,6 +200,7 @@ void VulkanRenderer::createLogicalDevice()
 
     device = vk::raii::Device(physicalDevice, deviceCreateInfo);
     graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
+    graphicsQueueFamilyIndex = queueIndex;
 }
 
 void VulkanRenderer::createSurface()
@@ -328,8 +327,8 @@ void VulkanRenderer::createGraphicsPipeline()
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly{  .topology = vk::PrimitiveTopology::eTriangleList };
-    vk::Viewport { 0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f };
-    vk::Rect2D { vk::Offset2D{ 0, 0 }, swapChainExtent };
+    // vk::Viewport { 0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f };
+    // vk::Rect2D { vk::Offset2D{ 0, 0 }, swapChainExtent };
 
     std::vector dynamicStates = {
         vk::DynamicState::eViewport,
@@ -380,6 +379,143 @@ void VulkanRenderer::createGraphicsPipeline()
     };
 
     graphicsPipeline = vk::raii::Pipeline(device, nullptr, pipelineInfo);
+}
+
+void VulkanRenderer::createCommandPool()
+{
+    vk::CommandPoolCreateInfo poolInfo{ 
+        .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer, 
+        .queueFamilyIndex = graphicsQueueFamilyIndex 
+    };
+    commandPool = vk::raii::CommandPool(device, poolInfo);
+}
+
+void VulkanRenderer::createCommandBuffer()
+{
+    vk::CommandBufferAllocateInfo allocInfo{ 
+        .commandPool = commandPool,
+        .level = vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = 1 
+    };
+    commandBuffer = std::move(vk::raii::CommandBuffers(device, allocInfo).front());
+}
+
+
+void VulkanRenderer::transitionImageLayout(std::uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask)
+{
+    vk::ImageMemoryBarrier2 barrier = {
+        .srcStageMask = srcStageMask,
+        .srcAccessMask = srcAccessMask,
+        .dstStageMask = dstStageMask,
+        .dstAccessMask = dstAccessMask,
+        .oldLayout = oldLayout,
+        .newLayout = newLayout,
+        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+        .image = swapChainImages[imageIndex],
+        .subresourceRange = {
+            .aspectMask = vk::ImageAspectFlagBits::eColor,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        }
+    };
+    vk::DependencyInfo dependencyInfo = {
+        .dependencyFlags = {},
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier
+    };
+    commandBuffer.pipelineBarrier2(dependencyInfo);
+}
+
+void VulkanRenderer::recordCommandBuffer(std::uint32_t imageIndex)
+{
+    commandBuffer.begin({});
+
+    // Transition the image layout for rendering
+    transitionImageLayout(
+        imageIndex,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eColorAttachmentOptimal,
+        {},
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput
+    );
+
+    // Set up the color attachment
+    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
+    vk::RenderingAttachmentInfo attachmentInfo = {
+        .imageView = swapChainImageViews[imageIndex],
+        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+        .loadOp = vk::AttachmentLoadOp::eClear,
+        .storeOp = vk::AttachmentStoreOp::eStore,
+        .clearValue = clearColor
+    };
+
+    // Set up the rendering info
+    vk::RenderingInfo renderingInfo = {
+        .renderArea = { .offset = { 0, 0 }, .extent = swapChainExtent },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &attachmentInfo
+    };
+
+    // Begin rendering
+    commandBuffer.beginRendering(renderingInfo);
+
+    // // Rendering commands will go here
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
+
+    commandBuffer.setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
+    commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
+
+    commandBuffer.draw(3, 1, 0, 0);
+
+    // End rendering
+    commandBuffer.endRendering();
+
+    // Transition the image layout for presentation
+    transitionImageLayout(
+        imageIndex,
+        vk::ImageLayout::eColorAttachmentOptimal,
+        vk::ImageLayout::ePresentSrcKHR,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        {},
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::PipelineStageFlagBits2::eBottomOfPipe
+    );
+
+    commandBuffer.end();
+}
+
+template<typename T>
+void setDebugName(vk::raii::Device& device, T& obj, const std::string& name)
+{
+    vk::DebugUtilsObjectNameInfoEXT nameInfo {
+        .objectType = T::objectType,
+        .objectHandle = reinterpret_cast<std::uintptr_t>(static_cast<T::CType>(*obj)),
+        .pObjectName = name.c_str()
+    };
+    device.setDebugUtilsObjectNameEXT(nameInfo);
+}
+
+void VulkanRenderer::createSyncObjects()
+{
+    presentCompleteSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo());
+    // renderFinishedSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo());
+    drawFence = vk::raii::Fence(device, {.flags = vk::FenceCreateFlagBits::eSignaled});
+    for (auto i = 0u; i < swapChainImages.size(); ++i)
+        renderFinishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+
+    if constexpr(enableValidationLayers)
+    {
+        setDebugName(device, presentCompleteSemaphore, "presentCompleteSemaphore");
+        for (auto i = 0u; i < renderFinishedSemaphores.size(); ++i)
+            setDebugName(device, renderFinishedSemaphores[i], std::format("renderFinishedSemaphores[{}]", i));
+        setDebugName(device, drawFence, "drawFence");
+    }
 }
 
 void VulkanRenderer::init()
@@ -444,6 +580,9 @@ void VulkanRenderer::init()
     createSwapChain();
     createImageViews();
     createGraphicsPipeline();
+    createCommandPool();
+    createCommandBuffer();
+    createSyncObjects();
 }
 
 static void handleGLFWError(int result)
@@ -470,28 +609,56 @@ void VulkanRenderer::initWindow()
     glfwWindowHint(glfw_client_api, glfw_no_api);
     glfwWindowHint(glfw_resizable, glfw_false);
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, "Kevin", nullptr, nullptr);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Candela 3", nullptr, nullptr);
     handleGLFWError(window == nullptr ? glfw_false : glfw_true);
 }
 
-
 void VulkanRenderer::renderFrame()
 {
+    // graphicsQueue.waitIdle();
+    device.waitForFences(*drawFence, vk::True, std::numeric_limits<std::uint64_t>().max());
+    device.resetFences(*drawFence);
     
+    auto [result, imageIndex] = swapChain.acquireNextImage(std::numeric_limits<std::uint64_t>().max(), *presentCompleteSemaphore, nullptr);
+    auto &renderFinishedSemaphore = renderFinishedSemaphores[imageIndex];
+    // std::cout << imageIndex << ",";
+    recordCommandBuffer(imageIndex);
+
+    vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
+    const vk::SubmitInfo submitInfo{
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &*presentCompleteSemaphore,
+        .pWaitDstStageMask = &waitDestinationStageMask,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &*commandBuffer,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &*renderFinishedSemaphore
+    };
+
+    graphicsQueue.submit(submitInfo, *drawFence);
+    
+    const vk::PresentInfoKHR presentInfoKHR{
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &*renderFinishedSemaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &*swapChain,
+        .pImageIndices = &imageIndex
+    };
+
+    result = graphicsQueue.presentKHR(presentInfoKHR);
 }
 
-std::optional<bool> VulkanRenderer::processMessages() 
+bool VulkanRenderer::processMessages() 
 {
     using namespace glfw;
-
-    int shouldClose {};
-    while (!(shouldClose = glfwWindowShouldClose(window)))
-        glfwPollEvents();
-    return shouldClose;
+    glfwPollEvents();
+    return glfwWindowShouldClose(window);
 }
 
 void VulkanRenderer::cleanup()
 {
+    graphicsQueue.waitIdle();
+
     using namespace glfw;
     glfwDestroyWindow(window);
     glfwTerminate();
