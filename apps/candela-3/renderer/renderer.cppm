@@ -51,6 +51,8 @@ export namespace candela::renderer
         //                                               const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
         //                                               void *                                         pUserData);
 
+        std::uint32_t getFrameModulo() const;
+
         glfw::GLFWwindow* window;
 
         vk::raii::Context  context;
@@ -69,13 +71,15 @@ export namespace candela::renderer
         vk::raii::PipelineLayout pipelineLayout;
         vk::raii::Pipeline graphicsPipeline;
 
+        static constexpr std::uint32_t MAX_FRAMES_IN_FLIGHT = 2;
         vk::raii::CommandPool commandPool;
-        vk::raii::CommandBuffer commandBuffer;
+        std::vector<vk::raii::CommandBuffer> commandBuffers;
+        vk::raii::CommandBuffer *commandBuffer;
 
-        vk::raii::Semaphore presentCompleteSemaphore;
-        // vk::raii::Semaphore renderFinishedSemaphore;
-        std::vector<vk::raii::Semaphore> renderFinishedSemaphores;
-        vk::raii::Fence drawFence;
+        std::vector<vk::raii::Semaphore> presentCompleteSemaphores;
+        std::vector<vk::raii::Semaphore> renderFinishedSemaphores; // based on swapchain frame index
+        std::vector<vk::raii::Fence> drawFences;
+        std::uint64_t frameIndex;
 
         // static constexpr bool enableValidationLayers;
         #ifdef NDEBUG
