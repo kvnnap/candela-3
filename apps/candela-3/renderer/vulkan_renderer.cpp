@@ -5,13 +5,12 @@ module;
 
 module candela.renderer;
 
-// import vulkan;
-// import external.glfw;
+import core.util;
 
 using candela::renderer::VulkanRenderer;
 
 template<typename T>
-void setDebugName(vk::raii::Device& device, T& obj, const std::string& name)
+static void setDebugName(vk::raii::Device& device, T& obj, const std::string& name)
 {
     vk::DebugUtilsObjectNameInfoEXT nameInfo {
         .objectType = T::objectType,
@@ -19,6 +18,28 @@ void setDebugName(vk::raii::Device& device, T& obj, const std::string& name)
         .pObjectName = name.c_str()
     };
     device.setDebugUtilsObjectNameEXT(nameInfo);
+}
+
+static auto extComparator = [](const vk::ExtensionProperties& e, const char* r){ return std::string_view(e.extensionName) == r; };
+static auto layerComparator = [](const vk::LayerProperties& l, const char* r){ return std::string_view(l.layerName) == r; };
+
+static void throwIfNotSupported(const auto& availableExtensions, const auto& reqExtensions, auto &comparator, const std::string& throwMessagePrefix)
+{
+    auto requiredThatFailed = core::util::GetElemsNotInSet(availableExtensions, reqExtensions, comparator);
+    if (requiredThatFailed.empty())
+        return;
+    auto reqJoined = requiredThatFailed 
+        | std::views::transform([](auto x){ return std::string_view(*x); })
+        | std::views::join_with(std::string(", "))
+        | std::ranges::to<std::string>();
+
+    // std::string reqJoined;
+    // for (auto* p : requiredThatFailed) {
+    //     if (!reqJoined.empty()) reqJoined += ", ";
+    //     reqJoined += *p;
+    // }
+
+    throw std::runtime_error(throwMessagePrefix + ": " + reqJoined);
 }
 
 VulkanRenderer::VulkanRenderer()
@@ -133,16 +154,7 @@ void VulkanRenderer::pickPhysicalDevice()
             continue;
 
         auto availableDevExtensions = phyDevice.enumerateDeviceExtensionProperties();
-        bool supportsAllRequiredExtensions =
-            std::ranges::all_of( requiredDeviceExtension,
-            [&availableDevExtensions]( auto const & requiredDeviceExtension )
-            {
-                return std::ranges::any_of( availableDevExtensions,
-                                            [requiredDeviceExtension]( auto const & availableDeviceExtension )
-                                            { return std::string_view(availableDeviceExtension.extensionName) == requiredDeviceExtension; } );
-            } 
-            );
-
+        bool supportsAllRequiredExtensions = core::util::AllElemsInSet(availableDevExtensions, requiredDeviceExtension, extComparator);
         if (!supportsAllRequiredExtensions)
             continue;
 
@@ -186,8 +198,6 @@ void VulkanRenderer::createLogicalDevice()
         .queueCount = 1,
         .pQueuePriorities = &prio
     };
-
-    vk::PhysicalDeviceFeatures deviceFeatures;
 
     // these are the features we queried for earlier when picking the device.
     // It's a chain PhysicalDeviceFeatures2 -> PhysicalDeviceVulkan13Features -> PhysicalDeviceExtendedDynamicStateFeaturesEXT
@@ -245,7 +255,7 @@ void VulkanRenderer::createSwapChain()
         int width, height;
         glfw::glfwGetFramebufferSize(window, &width, &height);
         extent.width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
-        extent.height = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+        extent.height = std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
     }
 
     // To reduce any waiting, use +1
@@ -297,16 +307,7 @@ void VulkanRenderer::createImageViews()
     }
 }
 
-static std::vector<std::byte> loadBlob(const std::string& path)
-{
-    std::vector<std::byte> buffer(std::filesystem::file_size(path));
-    std::ifstream file(path, std::ios::binary);
-    if (!file)
-        throw std::runtime_error("failed to open file: " + path);
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), buffer.size()))
-        throw std::runtime_error("failed to read file: " + path);
-    return buffer;
-}
+
 
 vk::raii::ShaderModule VulkanRenderer::createShaderModule(const std::vector<std::byte>& code)
 {
@@ -320,7 +321,7 @@ vk::raii::ShaderModule VulkanRenderer::createShaderModule(const std::vector<std:
 void VulkanRenderer::createGraphicsPipeline()
 {
     // Load shader
-    auto code = loadBlob("shaders/shaders.spv");
+    auto code = core::util::loadBinaryFile("shaders/shaders.spv");
     auto shaderModule = createShaderModule(code);
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo { 
         .stage = vk::ShaderStageFlagBits::eVertex, 
@@ -536,28 +537,12 @@ void VulkanRenderer::init()
     
     // Check if the extensions needed by glfw are supported by Vulkan
     auto extensionProperties = context.enumerateInstanceExtensionProperties();
-    for (std::string_view required : requiredExtensions)
-    {
-        if (!std::ranges::any_of(extensionProperties,
-            [&](auto& e){ return e.extensionName == required; }))
-        {
-            throw std::runtime_error(
-                std::format("Required extension not supported: {}", required));
-        }
-    }
+    throwIfNotSupported(extensionProperties, requiredExtensions, extComparator, "Required extension(s) not supported");
 
     // Check if the required layers are supported by the Vulkan implementation.
     auto requiredLayers = getRequiredLayers();
     auto layerProperties = context.enumerateInstanceLayerProperties();
-    for (std::string_view required : requiredLayers)
-    {
-        if (!std::ranges::any_of(layerProperties,
-            [&](const auto& layer) { return layer.layerName == required; }))
-        {
-            throw std::runtime_error(
-                std::format("Required layer not supported: {}", required));
-        }
-    }
+    throwIfNotSupported(layerProperties, requiredLayers, layerComparator, "Required layer(s) not supported");
 
     vk::ApplicationInfo appInfo{
         .pApplicationName = "Candela",

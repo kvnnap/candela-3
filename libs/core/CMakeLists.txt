@@ -24,6 +24,8 @@ target_sources(core PRIVATE
     configuration/parser/json_configuration_parser.cpp
 
     system/shared_library.cpp
+
+    util/util.cpp
 )
 
 # target_sources(configuration PUBLIC 
