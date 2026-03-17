@@ -33,18 +33,11 @@ static void throwIfNotSupported(const auto& availableExtensions, const auto& req
         | std::views::join_with(std::string(", "))
         | std::ranges::to<std::string>();
 
-    // std::string reqJoined;
-    // for (auto* p : requiredThatFailed) {
-    //     if (!reqJoined.empty()) reqJoined += ", ";
-    //     reqJoined += *p;
-    // }
-
     throw std::runtime_error(throwMessagePrefix + ": " + reqJoined);
 }
 
 VulkanRenderer::VulkanRenderer()
-    : window(), 
-      instance(nullptr),
+    : instance(nullptr),
       debugMessenger(nullptr),
       physicalDevice(nullptr),
       device(nullptr),
@@ -64,6 +57,7 @@ VulkanRenderer::VulkanRenderer()
 
 VulkanRenderer::~VulkanRenderer()
 {
+    graphicsQueue.waitIdle();
 }
 
 static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
@@ -83,10 +77,8 @@ static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSev
 
 std::vector<const char*> VulkanRenderer::getRequiredInstanceExtensions()
 {
-    std::uint32_t glfwExtensionCount = 0;
-    auto glfwExtensions = glfw::glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    auto extensions = window->getRequiredVulkanExtensions();
 
-    std::vector extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
     if constexpr(enableValidationLayers)
     {
         extensions.push_back(vk::EXTDebugUtilsExtensionName);
@@ -228,7 +220,7 @@ void VulkanRenderer::createLogicalDevice()
 void VulkanRenderer::createSurface()
 {
     vk::raii::SurfaceKHR::CType _surface{nullptr};
-    if (glfw::glfwCreateWindowSurface(*instance, window, nullptr, &_surface) != 0)
+    if(!window->createVulkanSurface(&*instance, &_surface))
         throw std::runtime_error("failed to create window surface!");
     surface = vk::raii::SurfaceKHR(instance, _surface);
 }
@@ -252,8 +244,7 @@ void VulkanRenderer::createSwapChain()
     extent = surfaceCapabilities.currentExtent;
     if (surfaceCapabilities.currentExtent.width == std::numeric_limits<std::uint32_t>::max())
     {
-        int width, height;
-        glfw::glfwGetFramebufferSize(window, &width, &height);
+        auto [width, height] = window->getWindowClientAreaSize();
         extent.width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
         extent.height = std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
     }
@@ -532,6 +523,7 @@ void VulkanRenderer::createSyncObjects()
 
 void VulkanRenderer::init()
 {
+    window = std::make_unique<core::window::GLFWWindow>("Candela 3", 800, 600);
     // Query the extensions needed by GLFW
     auto requiredExtensions = getRequiredInstanceExtensions();
     
@@ -581,34 +573,6 @@ void VulkanRenderer::init()
     createSyncObjects();
 }
 
-static void handleGLFWError(int result)
-{
-    using namespace glfw;
-    if (result != glfw_false)
-        return;
-
-    const char* description {};
-    const auto code = glfwGetError(&description);
-    throw std::runtime_error("vulkan_renderer: glfwInit() failed, code: " 
-        + std::to_string(code) + ", description: " + std::string(description));
-}
-
-void VulkanRenderer::initWindow()
-{
-    using namespace glfw;
-    constexpr unsigned WIDTH = 800;
-    constexpr unsigned HEIGHT = 600;
-
-    auto result = glfwInit();
-    handleGLFWError(result);
-
-    glfwWindowHint(glfw_client_api, glfw_no_api);
-    glfwWindowHint(glfw_resizable, glfw_false);
-
-    window = glfwCreateWindow(WIDTH, HEIGHT, "Candela 3", nullptr, nullptr);
-    handleGLFWError(window == nullptr ? glfw_false : glfw_true);
-}
-
 void VulkanRenderer::renderFrame()
 {
     const auto frameMod = getFrameModulo();
@@ -652,18 +616,7 @@ void VulkanRenderer::renderFrame()
 
 bool VulkanRenderer::processMessages() 
 {
-    using namespace glfw;
-    glfwPollEvents();
-    return glfwWindowShouldClose(window);
-}
-
-void VulkanRenderer::cleanup()
-{
-    graphicsQueue.waitIdle();
-
-    using namespace glfw;
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    return window->processMessages();
 }
 
 std::uint32_t VulkanRenderer::getFrameModulo() const

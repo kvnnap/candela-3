@@ -1,7 +1,7 @@
 export module candela.renderer;
 
 import std;
-import external.glfw;
+import core.window;
 import vulkan;
 
 export namespace candela::renderer
@@ -24,9 +24,7 @@ export namespace candela::renderer
         void init() override;
         void renderFrame() override;
 
-        void initWindow();
         bool processMessages();
-        void cleanup();
     private:
         std::vector<const char*> getRequiredInstanceExtensions();
         std::vector<const char*> getRequiredLayers();
@@ -53,7 +51,7 @@ export namespace candela::renderer
 
         std::uint32_t getFrameModulo() const;
 
-        glfw::GLFWwindow* window;
+        std::unique_ptr<core::window::IVulkanWindow> window;
 
         vk::raii::Context  context;
         vk::raii::Instance instance;

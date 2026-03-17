@@ -25,4 +25,5 @@ export namespace glfw
     constexpr auto glfw_resizable = GLFW_RESIZABLE;
     constexpr auto glfw_true = GLFW_TRUE;
     constexpr auto glfw_false = GLFW_FALSE;
+    constexpr auto glfw_no_error = GLFW_NO_ERROR;
 }

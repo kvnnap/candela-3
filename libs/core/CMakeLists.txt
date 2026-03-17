@@ -4,7 +4,7 @@ find_package(RapidJSON CONFIG REQUIRED)
 
 add_library(core)
 
-target_link_libraries(core PRIVATE RapidJSON rapidjson)
+target_link_libraries(core PRIVATE external RapidJSON rapidjson VulkanCppModule)
 
 target_sources(core PUBLIC
     FILE_SET public_headers TYPE HEADERS
@@ -26,6 +26,8 @@ target_sources(core PRIVATE
     system/shared_library.cpp
 
     util/util.cpp
+
+    window/glfw_window.cpp
 )
 
 # target_sources(configuration PUBLIC 
@@ -55,6 +57,8 @@ target_sources(core PUBLIC
         util/util.cppm
 
         plugin/plugin.cppm
+
+        window/window.cppm
 )
 
 set_target_properties(core PROPERTIES 

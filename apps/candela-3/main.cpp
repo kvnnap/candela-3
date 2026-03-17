@@ -36,7 +36,6 @@ int main(int argc, const char * const * argv)
     try 
     {
         VulkanRenderer vk;
-        vk.initWindow();
         vk.init();
 
         while(true)
@@ -46,8 +45,6 @@ int main(int argc, const char * const * argv)
                 break;
             vk.renderFrame();
         }
-        
-        vk.cleanup();
 
     } catch (const exception& e) 
     {
