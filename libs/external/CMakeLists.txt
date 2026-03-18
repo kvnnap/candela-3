@@ -63,7 +63,6 @@ target_compile_definitions(VulkanCppModule PRIVATE
     VULKAN_HPP_CXX_MODULE_EXPERIMENTAL_WARNING=1
 )
 
-target_include_directories(VulkanCppModule PRIVATE "${Vulkan_INCLUDE_DIR}")
 target_link_libraries(VulkanCppModule PUBLIC Vulkan::Headers)
 # set_target_properties(VulkanCppModule PROPERTIES CXX_STANDARD 23 CXX_MODULE_STD ON)
 set_target_properties(VulkanCppModule PROPERTIES 
@@ -74,11 +73,13 @@ set_target_properties(VulkanCppModule PROPERTIES
     COMPILE_WARNING_AS_ERROR ON
     DEBUG_POSTFIX "_d"
 )
+
+get_target_property(VKH_INCLUDE_DIR Vulkan::Headers INTERFACE_INCLUDE_DIRECTORIES)
 target_sources(VulkanCppModule PUBLIC
         FILE_SET cxx_modules TYPE CXX_MODULES
         BASE_DIRS 
-            "${Vulkan_INCLUDE_DIR}"
+            "${VKH_INCLUDE_DIR}"
         FILES 
-            "${Vulkan_INCLUDE_DIR}/vulkan/vulkan.cppm"
-            "${Vulkan_INCLUDE_DIR}/vulkan/vulkan_video.cppm"
+            "${VKH_INCLUDE_DIR}/vulkan/vulkan.cppm"
+            "${VKH_INCLUDE_DIR}/vulkan/vulkan_video.cppm"
 )
