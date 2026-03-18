@@ -39,7 +39,7 @@ ARG USER=vscode
 # Install useful things for development
 RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
- && apt-get install -y --no-install-recommends sudo openssh-client lldb-21 clangd-21 \
+ && apt-get install -y --no-install-recommends sudo openssh-client lldb-21 clangd-21 vulkan-validationlayers \
  && rm -rf /var/lib/apt/lists/* \
  && update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-21 210 \
  && update-alternatives --install /usr/bin/lldb lldb /usr/bin/lldb-21 210

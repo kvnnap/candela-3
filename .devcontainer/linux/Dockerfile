@@ -46,7 +46,7 @@ ARG USER=vscode
 # Install useful things for development
 RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
- && apt-get install -y --no-install-recommends sudo openssh-client lldb clangd mesa-vulkan-drivers \
+ && apt-get install -y --no-install-recommends sudo openssh-client lldb clangd mesa-vulkan-drivers vulkan-validationlayers \
  && rm -rf /var/lib/apt/lists/*
 
 # Create group and user using provided IDs
