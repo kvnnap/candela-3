@@ -1,8 +1,5 @@
 FROM ubuntu:resolute AS base
 
-# Build-time arguments for user/group IDs
-ARG CMAKETAR=cmake-4.2.3-linux-x86_64.tar.gz
-
 # Install clang in non-interactive mode and clean up apt cache
 RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
@@ -12,10 +9,12 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && rm -rf /var/lib/apt/lists/*
 
 # CMAKE
+ARG CMAKEVERSION=4.3.0
+ARG CMAKETAR=cmake-${CMAKEVERSION}-linux-x86_64.tar.gz
 RUN cd \
- && wget https://github.com/Kitware/CMake/releases/download/v4.2.3/"${CMAKETAR}" \
- && tar -xvf "${CMAKETAR}" --strip-components=1 -C /usr/local \
- && rm "${CMAKETAR}"
+ && wget https://github.com/Kitware/CMake/releases/download/v${CMAKEVERSION}/${CMAKETAR} \
+ && tar -xvf ${CMAKETAR} --strip-components=1 -C /usr/local \
+ && rm ${CMAKETAR}
 
 # Github section
 FROM base AS github

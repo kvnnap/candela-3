@@ -23,11 +23,12 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 210
 
 # CMAKE
-ARG CMAKETAR=cmake-4.2.3-linux-x86_64.tar.gz
+ARG CMAKEVERSION=4.3.0
+ARG CMAKETAR=cmake-${CMAKEVERSION}-linux-x86_64.tar.gz
 RUN cd \
- && wget https://github.com/Kitware/CMake/releases/download/v4.2.3/"${CMAKETAR}" \
- && tar -xvf "${CMAKETAR}" --strip-components=1 -C /usr/local \
- && rm "${CMAKETAR}"
+ && wget https://github.com/Kitware/CMake/releases/download/v${CMAKEVERSION}/${CMAKETAR} \
+ && tar -xvf ${CMAKETAR} --strip-components=1 -C /usr/local \
+ && rm ${CMAKETAR}
 
 # vscode Section
 FROM base AS vscode
