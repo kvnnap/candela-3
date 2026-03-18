@@ -37,7 +37,7 @@ public:
 private:
     glfw::GLFWwindow *window;
     static std::uint32_t windowCount;
-    void cleanup(bool allowThrow = true);
+    void cleanup();
     static void init();
     static void destroy();
 };

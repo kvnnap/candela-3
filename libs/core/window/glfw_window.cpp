@@ -65,10 +65,10 @@ GLFWWindow::GLFWWindow(const std::string& name, int width, int height)
 
 GLFWWindow::~GLFWWindow()
 {
-    cleanup(false);
+    cleanup();
 }
 
-void GLFWWindow::cleanup(bool allowThrow)
+void GLFWWindow::cleanup()
 {
     if (window == nullptr)
         return;
@@ -81,10 +81,7 @@ void GLFWWindow::cleanup(bool allowThrow)
 bool GLFWWindow::processMessages()
 {
     glfwProcessMessages();
-    auto res = glfw::glfwWindowShouldClose(window);
-    if (res)
-        cleanup();
-    return res;
+    return glfw::glfwWindowShouldClose(window);
 }
 
 std::pair<int, int> GLFWWindow::getWindowClientAreaSize() const
