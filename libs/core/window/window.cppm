@@ -29,7 +29,6 @@ class GLFWWindow
 public:
     GLFWWindow(const std::string& name, int width, int height);
     ~GLFWWindow() override;
-    void cleanup();
     bool processMessages() override;
     std::pair<int, int> getWindowClientAreaSize() const override;
     std::vector<const char*> getRequiredVulkanExtensions() const override;
@@ -38,6 +37,7 @@ public:
 private:
     glfw::GLFWwindow *window;
     static std::uint32_t windowCount;
+    void cleanup(bool allowThrow = true);
     static void init();
     static void destroy();
 };

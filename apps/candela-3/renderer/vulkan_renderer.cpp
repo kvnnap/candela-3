@@ -57,7 +57,8 @@ VulkanRenderer::VulkanRenderer()
 
 VulkanRenderer::~VulkanRenderer()
 {
-    graphicsQueue.waitIdle();
+    if (graphicsQueue != nullptr)
+        graphicsQueue.waitIdle();
 }
 
 static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,

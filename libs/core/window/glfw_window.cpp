@@ -4,7 +4,7 @@ import vulkan;
 
 using namespace core::window;
 
-static void handleGLFWError(int result)
+static void handleGLFWError(int result, bool allowThrow = true)
 {
     using namespace glfw;
     if (result != glfw_false)
@@ -14,8 +14,11 @@ static void handleGLFWError(int result)
     const auto code = glfwGetError(&description);
     if (code == glfw::glfw_no_error)
         return;
-    throw std::runtime_error("gflw_window(mine): code: " 
-        + std::to_string(code) + ", description: " + std::string(description));
+    auto errorCode = std::format("gflw_window(mine): code: {}, description: {}", code, description);
+    if (allowThrow)
+        throw std::runtime_error(errorCode);
+    else 
+        std::cerr << errorCode << std::endl;
 }
 
 std::uint32_t GLFWWindow::windowCount = 0u;
@@ -36,13 +39,12 @@ void GLFWWindow::destroy()
     if (windowCount > 0)
         return;
     glfw::glfwTerminate();
-    handleGLFWError(glfw::glfw_false);
+    handleGLFWError(glfw::glfw_false, false);
 }
 
 bool GLFWWindow::glfwProcessMessages()
 {
     glfw::glfwPollEvents();
-
     return windowCount == 0;
 }
 
@@ -63,14 +65,15 @@ GLFWWindow::GLFWWindow(const std::string& name, int width, int height)
 
 GLFWWindow::~GLFWWindow()
 {
-    cleanup();
+    cleanup(false);
 }
 
-void GLFWWindow::cleanup()
+void GLFWWindow::cleanup(bool allowThrow)
 {
     if (window == nullptr)
         return;
     glfw::glfwDestroyWindow(window);
+    handleGLFWError(glfw::glfw_false, false);
     window = nullptr;
     destroy();
 }
@@ -102,5 +105,7 @@ bool GLFWWindow::createVulkanSurface(const void* vkInstance, void* vkSurfaceKHR)
 {
     const auto instance = static_cast<const vk::raii::Instance::CType*>(vkInstance);
     auto surface = static_cast<vk::raii::SurfaceKHR::CType *>(vkSurfaceKHR);
-    return glfw::glfwCreateWindowSurface(*instance, window, nullptr, surface) == 0;
+    auto res = glfw::glfwCreateWindowSurface(*instance, window, nullptr, surface) == 0;
+    handleGLFWError(res);
+    return res;
 }
