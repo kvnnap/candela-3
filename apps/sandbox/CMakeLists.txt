@@ -1,7 +1,7 @@
 
 project(candela-sandbox)
 
-find_package(Vulkan REQUIRED)
+# find_package(Vulkan REQUIRED)
 
 add_executable(candela-sandbox)
 # target_link_libraries(candela-sandbox PRIVATE Vulkan::Vulkan)

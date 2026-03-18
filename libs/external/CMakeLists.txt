@@ -51,7 +51,7 @@ set_target_properties(external PROPERTIES
 )
 
 
-find_package(Vulkan REQUIRED)
+find_package(VulkanHeaders CONFIG)
 
 # set up Vulkan C++ module (enabled when ENABLE_CPP20_MODULE=ON)
 add_library(VulkanCppModule)
@@ -64,7 +64,7 @@ target_compile_definitions(VulkanCppModule PRIVATE
 )
 
 target_include_directories(VulkanCppModule PRIVATE "${Vulkan_INCLUDE_DIR}")
-target_link_libraries(VulkanCppModule PUBLIC Vulkan::Vulkan)
+target_link_libraries(VulkanCppModule PUBLIC Vulkan::Headers)
 # set_target_properties(VulkanCppModule PROPERTIES CXX_STANDARD 23 CXX_MODULE_STD ON)
 set_target_properties(VulkanCppModule PROPERTIES 
     CXX_STANDARD 23
