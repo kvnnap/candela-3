@@ -1,13 +1,9 @@
-module;
-
-// Used for vkDebugCallback
-#include "vulkan/vk_platform.h"
-
 module candela.renderer;
 
 import core.util;
 
 using candela::renderer::VulkanRenderer;
+using candela::renderer::VulkanInstance;
 
 template<typename T>
 static void setDebugName(vk::raii::Device& device, T& obj, const std::string& name)
@@ -20,26 +16,8 @@ static void setDebugName(vk::raii::Device& device, T& obj, const std::string& na
     device.setDebugUtilsObjectNameEXT(nameInfo);
 }
 
-static auto extComparator = [](const vk::ExtensionProperties& e, const char* r){ return std::string_view(e.extensionName) == r; };
-static auto layerComparator = [](const vk::LayerProperties& l, const char* r){ return std::string_view(l.layerName) == r; };
-
-static void throwIfNotSupported(const auto& availableExtensions, const auto& reqExtensions, auto &comparator, const std::string& throwMessagePrefix)
-{
-    auto requiredThatFailed = core::util::GetElemsNotInSet(availableExtensions, reqExtensions, comparator);
-    if (requiredThatFailed.empty())
-        return;
-    auto reqJoined = requiredThatFailed 
-        | std::views::transform([](auto x){ return std::string_view(*x); })
-        | std::views::join_with(std::string(", "))
-        | std::ranges::to<std::string>();
-
-    throw std::runtime_error(throwMessagePrefix + ": " + reqJoined);
-}
-
 VulkanRenderer::VulkanRenderer()
-    : instance(nullptr),
-      debugMessenger(nullptr),
-      physicalDevice(nullptr),
+    : physicalDevice(nullptr),
       device(nullptr),
       graphicsQueue(nullptr), graphicsQueueFamilyIndex(),
       surface(nullptr),
@@ -61,71 +39,11 @@ VulkanRenderer::~VulkanRenderer()
         graphicsQueue.waitIdle();
 }
 
-static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
-                                                      vk::DebugUtilsMessageTypeFlagsEXT              type,
-                                                      const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
-                                                      void *                                         pUserData)
-{
-  std::cerr << "validation layer: type " << to_string(type) << " msg: " << pCallbackData->pMessage << std::endl;
-  if (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
-  {
-      // Message is important enough to show
-  }
-
-  return vk::False;
-}
-
-
-std::vector<const char*> VulkanRenderer::getRequiredInstanceExtensions()
-{
-    auto extensions = window->getRequiredVulkanExtensions();
-
-    if constexpr(enableValidationLayers)
-    {
-        extensions.push_back(vk::EXTDebugUtilsExtensionName);
-    }
-
-    return extensions;
-}
-
-std::vector<const char*> VulkanRenderer::getRequiredLayers()
-{
-    // validation layers
-    const std::vector<char const*> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
-    
-    // Get the required layers
-    std::vector<char const*> requiredLayers;
-    if constexpr(enableValidationLayers)
-    {
-        requiredLayers.assign(validationLayers.begin(), validationLayers.end());
-    }
-
-    return requiredLayers;
-}
-
-void VulkanRenderer::setupDebugMessenger()
-{
-    if constexpr(enableValidationLayers) 
-    {
-        vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                                        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                                        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-        vk::DebugUtilsMessageTypeFlagsEXT     messageTypeFlags(
-                vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
-        vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT{.messageSeverity = severityFlags,
-                                                                            .messageType     = messageTypeFlags,
-                                                                            .pfnUserCallback = &vkDebugCallback};
-        debugMessenger = instance.createDebugUtilsMessengerEXT( debugUtilsMessengerCreateInfoEXT );
-    }
-}
-
 void VulkanRenderer::pickPhysicalDevice()
 {
     std::vector<const char*> requiredDeviceExtension = {vk::KHRSwapchainExtensionName};
 
-    auto physicalDevices = instance.enumeratePhysicalDevices();
+    auto physicalDevices = instance->getInstance().enumeratePhysicalDevices();
     if (physicalDevices.empty())
         throw std::runtime_error("Failed to find GPUs with Vulkan Support!");
     for (auto &phyDevice : physicalDevices)
@@ -209,7 +127,7 @@ void VulkanRenderer::createLogicalDevice()
         .pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &deviceQueueCreateInfo,
-        .enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtension.size()),
+        .enabledExtensionCount = static_cast<std::uint32_t>(requiredDeviceExtension.size()),
         .ppEnabledExtensionNames = requiredDeviceExtension.data()
     };
 
@@ -221,9 +139,10 @@ void VulkanRenderer::createLogicalDevice()
 void VulkanRenderer::createSurface()
 {
     vk::raii::SurfaceKHR::CType _surface{nullptr};
-    if(!window->createVulkanSurface(&*instance, &_surface))
+    auto &inst = instance->getInstance();
+    if(!window->createVulkanSurface(&*inst, &_surface))
         throw std::runtime_error("failed to create window surface!");
-    surface = vk::raii::SurfaceKHR(instance, _surface);
+    surface = vk::raii::SurfaceKHR(inst, _surface);
 }
 
 void VulkanRenderer::createSwapChain()
@@ -246,8 +165,8 @@ void VulkanRenderer::createSwapChain()
     if (surfaceCapabilities.currentExtent.width == std::numeric_limits<std::uint32_t>::max())
     {
         auto [width, height] = window->getWindowClientAreaSize();
-        extent.width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
-        extent.height = std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+        extent.width = std::clamp<std::uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+        extent.height = std::clamp<std::uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
     }
 
     // To reduce any waiting, use +1
@@ -305,7 +224,7 @@ vk::raii::ShaderModule VulkanRenderer::createShaderModule(const std::vector<std:
 {
     vk::ShaderModuleCreateInfo createInfo{ 
         .codeSize = code.size() * sizeof(std::byte), 
-        .pCode = reinterpret_cast<const uint32_t*>(code.data()) 
+        .pCode = reinterpret_cast<const std::uint32_t*>(code.data()) 
     };
     return { device, createInfo };
 }
@@ -339,7 +258,7 @@ void VulkanRenderer::createGraphicsPipeline()
         vk::DynamicState::eViewport,
         vk::DynamicState::eScissor
     };
-    vk::PipelineDynamicStateCreateInfo dynamicState{ .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()), .pDynamicStates = dynamicStates.data() };
+    vk::PipelineDynamicStateCreateInfo dynamicState{ .dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size()), .pDynamicStates = dynamicStates.data() };
 
     // vk::PipelineViewportStateCreateInfo viewportState({}, 1, {}, 1);
     vk::PipelineViewportStateCreateInfo viewportState{ .viewportCount = 1, .scissorCount = 1 };
@@ -525,44 +444,9 @@ void VulkanRenderer::createSyncObjects()
 void VulkanRenderer::init()
 {
     window = std::make_unique<core::window::GLFWWindow>("Candela 3", 800, 600);
-    // Query the extensions needed by GLFW
-    auto requiredExtensions = getRequiredInstanceExtensions();
-    
-    // Check if the extensions needed by glfw are supported by Vulkan
-    auto extensionProperties = context.enumerateInstanceExtensionProperties();
-    throwIfNotSupported(extensionProperties, requiredExtensions, extComparator, "Required extension(s) not supported");
+    instance = std::make_unique<VulkanInstance>(*window);
+    instance->init();
 
-    // Check if the required layers are supported by the Vulkan implementation.
-    auto requiredLayers = getRequiredLayers();
-    auto layerProperties = context.enumerateInstanceLayerProperties();
-    throwIfNotSupported(layerProperties, requiredLayers, layerComparator, "Required layer(s) not supported");
-
-    vk::ApplicationInfo appInfo{
-        .pApplicationName = "Candela",
-        .applicationVersion = vk::makeVersion(1, 0, 0),
-        .pEngineName = "No Engine",
-        .engineVersion = vk::makeVersion(1, 0, 0),
-        .apiVersion = vk::ApiVersion14
-    };
-
-    vk::InstanceCreateInfo createInfo{
-        .pApplicationInfo = &appInfo,
-        .enabledLayerCount = static_cast<std::uint32_t>(requiredLayers.size()),
-        .ppEnabledLayerNames = requiredLayers.data(),
-        .enabledExtensionCount = static_cast<std::uint32_t>(requiredExtensions.size()),
-        .ppEnabledExtensionNames = requiredExtensions.data()
-    };
-    
-    try 
-    {
-        instance = vk::raii::Instance(context, createInfo);
-    } catch (const vk::SystemError& err)
-    {
-        std::cerr << "Vulkan error: " << err.what() << std::endl;
-        throw;
-    }
-
-    setupDebugMessenger();
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();

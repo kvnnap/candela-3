@@ -6,6 +6,15 @@ import vulkan;
 
 export namespace candela::renderer
 {
+        // static constexpr bool enableValidationLayers;
+    #ifdef NDEBUG
+    constexpr bool enableValidationLayers = false;
+    #else
+    constexpr bool enableValidationLayers = true;
+    #endif
+
+    auto extComparator = [](const vk::ExtensionProperties& e, const char* r){ return std::string_view(e.extensionName) == r; };
+
 	class IRenderer
 	{
 	public:
@@ -14,6 +23,25 @@ export namespace candela::renderer
 		virtual void init() = 0;
 		virtual void renderFrame() = 0;
 	};
+
+    class VulkanInstance
+    {
+    public:
+        VulkanInstance(const core::window::IVulkanWindow& window);
+        void init();
+
+        // Getters
+        vk::raii::Instance& getInstance();
+    private:
+        std::vector<const char*> getRequiredInstanceExtensions();
+        std::vector<const char*> getRequiredLayers();
+        void setupDebugMessenger();
+
+        const core::window::IVulkanWindow& window;
+        vk::raii::Context context; 
+        vk::raii::Instance instance; // needs context
+        vk::raii::DebugUtilsMessengerEXT debugMessenger; // needs instance
+    };
 
     class VulkanRenderer
         : public IRenderer
@@ -26,9 +54,7 @@ export namespace candela::renderer
 
         bool processMessages();
     private:
-        std::vector<const char*> getRequiredInstanceExtensions();
-        std::vector<const char*> getRequiredLayers();
-        void setupDebugMessenger();
+
         void pickPhysicalDevice();
         void createLogicalDevice();
         void createSurface();
@@ -53,19 +79,23 @@ export namespace candela::renderer
 
         std::unique_ptr<core::window::IVulkanWindow> window;
 
-        vk::raii::Context  context;
-        vk::raii::Instance instance;
-        vk::raii::DebugUtilsMessengerEXT debugMessenger;
-        vk::raii::PhysicalDevice physicalDevice;
-        vk::raii::Device device;
-        vk::raii::Queue graphicsQueue;
-        std::uint32_t graphicsQueueFamilyIndex;
-        vk::raii::SurfaceKHR surface;
-        vk::raii::SwapchainKHR swapChain;
-        std::vector<vk::Image> swapChainImages;
-        vk::Extent2D swapChainExtent;
+        std::unique_ptr<VulkanInstance> instance;
+
+        vk::raii::PhysicalDevice physicalDevice; // needs instance
+        vk::raii::Device device; // needs physical device
+
+        vk::raii::Queue graphicsQueue; // needs device
+        std::uint32_t graphicsQueueFamilyIndex; // From physical device
+
+        // Swap chain + window + surface related stuff
+        vk::raii::SurfaceKHR surface; // needs instance + window
+        vk::raii::SwapchainKHR swapChain; // needs device + surface
+        std::vector<vk::Image> swapChainImages; // needs swapchain
+        vk::Extent2D swapChainExtent; // needs surface window
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
-        std::vector<vk::raii::ImageView> swapChainImageViews;
+        std::vector<vk::raii::ImageView> swapChainImageViews; // needs swapchain
+
+
         vk::raii::PipelineLayout pipelineLayout;
         vk::raii::Pipeline graphicsPipeline;
 
@@ -74,16 +104,10 @@ export namespace candela::renderer
         std::vector<vk::raii::CommandBuffer> commandBuffers;
         vk::raii::CommandBuffer *commandBuffer;
 
+        // Sync stuff
         std::vector<vk::raii::Semaphore> presentCompleteSemaphores;
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores; // based on swapchain frame index
         std::vector<vk::raii::Fence> drawFences;
         std::uint64_t frameIndex;
-
-        // static constexpr bool enableValidationLayers;
-        #ifdef NDEBUG
-        static constexpr bool enableValidationLayers = false;
-        #else
-        static constexpr bool enableValidationLayers = true;
-        #endif
     };
 }

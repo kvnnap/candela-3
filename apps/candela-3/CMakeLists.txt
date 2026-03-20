@@ -18,6 +18,8 @@ target_sources(candela-3 PRIVATE
     version/version.cpp
     args/args.cpp
     renderer/vulkan_renderer.cpp
+    renderer/vulkan_instance.cpp
+    renderer/vulkan_utils.cpp
 )
 
 target_sources(candela-3 PRIVATE 
