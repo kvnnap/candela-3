@@ -87,7 +87,7 @@ void VulkanInstance::setupDebugMessenger()
     }
 }
 
-vk::raii::Instance& VulkanInstance::getInstance()
+const vk::raii::Instance& VulkanInstance::getInstance() const
 {
     return instance;
 }

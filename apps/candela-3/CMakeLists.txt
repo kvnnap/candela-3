@@ -19,6 +19,8 @@ target_sources(candela-3 PRIVATE
     args/args.cpp
     renderer/vulkan_renderer.cpp
     renderer/vulkan_instance.cpp
+    renderer/vulkan_device.cpp
+    renderer/vulkan_swapchain.cpp
     renderer/vulkan_utils.cpp
 )
 
