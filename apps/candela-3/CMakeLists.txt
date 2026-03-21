@@ -21,6 +21,7 @@ target_sources(candela-3 PRIVATE
     renderer/vulkan_instance.cpp
     renderer/vulkan_device.cpp
     renderer/vulkan_swapchain.cpp
+    renderer/vulkan_pipeline.cpp
     renderer/vulkan_utils.cpp
 )
 

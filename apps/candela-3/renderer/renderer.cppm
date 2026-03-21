@@ -110,6 +110,24 @@ export namespace candela::renderer
         vk::SurfaceFormatKHR swapChainSurfaceFormat;
     };
 
+    class VulkanPipeline
+    {
+    public:
+        VulkanPipeline(const VulkanDevice& device, const VulkanSwapchain& swapchain);
+        void init();
+
+        const vk::raii::Pipeline& getGraphicsPipeline() const;
+    private:
+        vk::raii::ShaderModule createShaderModule(const std::vector<std::byte>& code);
+        void createGraphicsPipeline();
+
+        const VulkanDevice& device;
+        const VulkanSwapchain& swapchain;
+        
+        vk::raii::PipelineLayout pipelineLayout;
+        vk::raii::Pipeline graphicsPipeline;
+    };
+
     class VulkanRenderer
         : public IRenderer
     {
@@ -122,8 +140,6 @@ export namespace candela::renderer
         bool processMessages();
     private:
 
-        vk::raii::ShaderModule createShaderModule(const std::vector<std::byte>& code);
-        void createGraphicsPipeline();
         void createCommandPool();
         void createCommandBuffer();
         void transitionImageLayout(std::uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask);
@@ -144,9 +160,7 @@ export namespace candela::renderer
         std::unique_ptr<VulkanInstance> instance;
         std::unique_ptr<VulkanDevice> device;
         std::unique_ptr<VulkanSwapchain> swapchain;
-
-        vk::raii::PipelineLayout pipelineLayout;
-        vk::raii::Pipeline graphicsPipeline;
+        std::unique_ptr<VulkanPipeline> pipeline;
 
         static constexpr std::uint32_t MAX_FRAMES_IN_FLIGHT = 2;
         vk::raii::CommandPool commandPool;
