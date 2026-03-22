@@ -6,7 +6,7 @@ import vulkan;
 
 export namespace candela::renderer
 {
-        // static constexpr bool enableValidationLayers;
+    // static constexpr bool enableValidationLayers;
     #ifdef NDEBUG
     constexpr bool enableValidationLayers = false;
     #else
@@ -14,6 +14,21 @@ export namespace candela::renderer
     #endif
 
     auto extComparator = [](const vk::ExtensionProperties& e, const char* r){ return std::string_view(e.extensionName) == r; };
+
+    template<typename T>
+    void setDebugName(const vk::raii::Device& device, T& obj, const std::string& name)
+    {
+        vk::DebugUtilsObjectNameInfoEXT nameInfo {
+            .objectType = T::objectType,
+            .objectHandle = reinterpret_cast<std::uintptr_t>(static_cast<T::CType>(*obj)),
+            .pObjectName = name.c_str()
+        };
+        device.setDebugUtilsObjectNameEXT(nameInfo);
+    }
+
+    constexpr std::uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
+    void transitionImageLayout(const vk::Image& image, vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask);
 
 	class IRenderer
 	{
@@ -128,6 +143,23 @@ export namespace candela::renderer
         vk::raii::Pipeline graphicsPipeline;
     };
 
+    class VulkanCommand
+    {
+    public:
+        VulkanCommand(const VulkanDevice& device);
+        void init();
+
+        vk::raii::CommandBuffer& getCommandBuffer(std::uint32_t frameIndex);
+    private:
+        void createCommandPool();
+        void createCommandBuffer();
+
+        const VulkanDevice& device;
+
+        vk::raii::CommandPool commandPool;
+        std::vector<vk::raii::CommandBuffer> commandBuffers;
+    };
+
     class VulkanRenderer
         : public IRenderer
     {
@@ -140,11 +172,8 @@ export namespace candela::renderer
         bool processMessages();
     private:
 
-        void createCommandPool();
-        void createCommandBuffer();
-        void transitionImageLayout(std::uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask);
         
-        void recordCommandBuffer(std::uint32_t imageIndex);
+        void recordCommandBuffer(std::uint32_t imageIndex, std::uint32_t frameIndex);
 
         void createSyncObjects();
 
@@ -161,16 +190,12 @@ export namespace candela::renderer
         std::unique_ptr<VulkanDevice> device;
         std::unique_ptr<VulkanSwapchain> swapchain;
         std::unique_ptr<VulkanPipeline> pipeline;
-
-        static constexpr std::uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-        vk::raii::CommandPool commandPool;
-        std::vector<vk::raii::CommandBuffer> commandBuffers;
-        vk::raii::CommandBuffer *commandBuffer;
+        std::unique_ptr<VulkanCommand> command;
 
         // Sync stuff
         std::vector<vk::raii::Semaphore> presentCompleteSemaphores;
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores; // based on swapchain frame index
         std::vector<vk::raii::Fence> drawFences;
-        std::uint64_t frameIndex;
+        std::uint64_t frameNumber;
     };
 }

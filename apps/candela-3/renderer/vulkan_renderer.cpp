@@ -5,21 +5,8 @@ import core.util;
 using candela::renderer::VulkanRenderer;
 using candela::renderer::VulkanInstance;
 
-template<typename T>
-static void setDebugName(const vk::raii::Device& device, T& obj, const std::string& name)
-{
-    vk::DebugUtilsObjectNameInfoEXT nameInfo {
-        .objectType = T::objectType,
-        .objectHandle = reinterpret_cast<std::uintptr_t>(static_cast<T::CType>(*obj)),
-        .pObjectName = name.c_str()
-    };
-    device.setDebugUtilsObjectNameEXT(nameInfo);
-}
-
 VulkanRenderer::VulkanRenderer()
-    : commandPool(nullptr),
-      commandBuffer(nullptr),
-      frameIndex()
+    : frameNumber()
 {
     // init();
 }
@@ -30,65 +17,15 @@ VulkanRenderer::~VulkanRenderer()
         device->wait();
 }
 
-void VulkanRenderer::createCommandPool()
+void VulkanRenderer::recordCommandBuffer(std::uint32_t imageIndex, std::uint32_t frameIndex)
 {
-    vk::CommandPoolCreateInfo poolInfo{ 
-        .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer, 
-        .queueFamilyIndex = device->getGraphicsQueueFamilyIndex() 
-    };
-    commandPool = vk::raii::CommandPool(device->getDevice(), poolInfo);
-}
-
-void VulkanRenderer::createCommandBuffer()
-{
-    vk::CommandBufferAllocateInfo allocInfo { 
-        .commandPool = commandPool,
-        .level = vk::CommandBufferLevel::ePrimary,
-        .commandBufferCount = MAX_FRAMES_IN_FLIGHT
-    };
-    commandBuffers = vk::raii::CommandBuffers(device->getDevice(), allocInfo);
-    if constexpr(enableValidationLayers)
-    {
-        for (auto i = 0u; i < MAX_FRAMES_IN_FLIGHT; ++i)
-            setDebugName(device->getDevice(), commandBuffers[i], std::format("commandBuffers[{}]", i));
-    }
-}
-
-void VulkanRenderer::transitionImageLayout(std::uint32_t imageIndex, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask)
-{
-    vk::ImageMemoryBarrier2 barrier = {
-        .srcStageMask = srcStageMask,
-        .srcAccessMask = srcAccessMask,
-        .dstStageMask = dstStageMask,
-        .dstAccessMask = dstAccessMask,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-        .image = swapchain->getImage(imageIndex),
-        .subresourceRange = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-        }
-    };
-    vk::DependencyInfo dependencyInfo = {
-        .dependencyFlags = {},
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &barrier
-    };
-    commandBuffer->pipelineBarrier2(dependencyInfo);
-}
-
-void VulkanRenderer::recordCommandBuffer(std::uint32_t imageIndex)
-{
-    commandBuffer->begin({});
+    auto &commandBuffer = command->getCommandBuffer(frameIndex);
+    commandBuffer.begin({});
 
     // Transition the image layout for rendering
     transitionImageLayout(
-        imageIndex,
+        swapchain->getImage(imageIndex),
+        command->getCommandBuffer(frameIndex),
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eColorAttachmentOptimal,
         {},
@@ -117,22 +54,23 @@ void VulkanRenderer::recordCommandBuffer(std::uint32_t imageIndex)
     };
 
     // Begin rendering
-    commandBuffer->beginRendering(renderingInfo);
+    commandBuffer.beginRendering(renderingInfo);
 
     // // Rendering commands will go here
-    commandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->getGraphicsPipeline());
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->getGraphicsPipeline());
 
-    commandBuffer->setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f));
-    commandBuffer->setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), extent));
+    commandBuffer.setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f));
+    commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), extent));
 
-    commandBuffer->draw(3, 1, 0, 0);
+    commandBuffer.draw(3, 1, 0, 0);
 
     // End rendering
-    commandBuffer->endRendering();
+    commandBuffer.endRendering();
 
     // Transition the image layout for presentation
     transitionImageLayout(
-        imageIndex,
+        swapchain->getImage(imageIndex),
+        command->getCommandBuffer(frameIndex),
         vk::ImageLayout::eColorAttachmentOptimal,
         vk::ImageLayout::ePresentSrcKHR,
         vk::AccessFlagBits2::eColorAttachmentWrite,
@@ -141,7 +79,7 @@ void VulkanRenderer::recordCommandBuffer(std::uint32_t imageIndex)
         vk::PipelineStageFlagBits2::eBottomOfPipe
     );
 
-    commandBuffer->end();
+    commandBuffer.end();
 }
 
 void VulkanRenderer::createSyncObjects()
@@ -185,9 +123,10 @@ void VulkanRenderer::init()
 
     pipeline = std::make_unique<VulkanPipeline>(*device, *swapchain);
     pipeline->init();
-    
-    createCommandPool();
-    createCommandBuffer();
+
+    command = std::make_unique<VulkanCommand>(*device);
+    command->init();
+
     createSyncObjects();
 }
 
@@ -196,17 +135,17 @@ void VulkanRenderer::renderFrame()
     const auto frameMod = getFrameModulo();
     auto &drawFence = drawFences[frameMod];
     auto &presentCompleteSemaphore = presentCompleteSemaphores[frameMod];
-    commandBuffer = &commandBuffers[frameMod];
+    auto &commandBuffer = command->getCommandBuffer(frameMod);
 
-    // graphicsQueue.waitIdle();
     auto& dev = device->getDevice();
     dev.waitForFences(*drawFence, vk::True, std::numeric_limits<std::uint64_t>().max());
     dev.resetFences(*drawFence);
     
     auto [result, imageIndex] = swapchain->getSwapchain().acquireNextImage(std::numeric_limits<std::uint64_t>().max(), *presentCompleteSemaphore, nullptr);
     auto &renderFinishedSemaphore = renderFinishedSemaphores[imageIndex];
-    // std::cout << imageIndex << ",";
-    recordCommandBuffer(imageIndex);
+
+    // Record the actual drawing
+    recordCommandBuffer(imageIndex, frameMod);
 
     vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
     const vk::SubmitInfo submitInfo{
@@ -214,12 +153,13 @@ void VulkanRenderer::renderFrame()
         .pWaitSemaphores = &*presentCompleteSemaphore,
         .pWaitDstStageMask = &waitDestinationStageMask,
         .commandBufferCount = 1,
-        .pCommandBuffers = &**commandBuffer,
+        .pCommandBuffers = &*commandBuffer,
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = &*renderFinishedSemaphore
     };
 
-    device->getGraphicsQueue().submit(submitInfo, *drawFence);
+    auto & graphicsQueue = device->getGraphicsQueue();
+    graphicsQueue.submit(submitInfo, *drawFence);
     
     const vk::PresentInfoKHR presentInfoKHR{
         .waitSemaphoreCount = 1,
@@ -229,8 +169,8 @@ void VulkanRenderer::renderFrame()
         .pImageIndices = &imageIndex
     };
 
-    result = device->getGraphicsQueue().presentKHR(presentInfoKHR);
-    ++frameIndex;
+    result = graphicsQueue.presentKHR(presentInfoKHR);
+    ++frameNumber;
 }
 
 bool VulkanRenderer::processMessages() 
@@ -240,5 +180,5 @@ bool VulkanRenderer::processMessages()
 
 std::uint32_t VulkanRenderer::getFrameModulo() const
 {
-    return frameIndex % MAX_FRAMES_IN_FLIGHT;
+    return frameNumber % MAX_FRAMES_IN_FLIGHT;
 }
