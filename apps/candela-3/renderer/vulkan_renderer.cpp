@@ -139,9 +139,16 @@ void VulkanRenderer::renderFrame()
 
     auto& dev = device->getDevice();
     dev.waitForFences(*drawFence, vk::True, std::numeric_limits<std::uint64_t>().max());
-    dev.resetFences(*drawFence);
     
     auto [result, imageIndex] = swapchain->getSwapchain().acquireNextImage(std::numeric_limits<std::uint64_t>().max(), *presentCompleteSemaphore, nullptr);
+    if (result == vk::Result::eErrorOutOfDateKHR) // we've been given an image, so do not recreate for vk::Result::eSuboptimalKHR at this instant
+    {
+        swapchain->recreate();
+        window->isWindowResizedFAS(); // reset, in
+        return;
+    }
+
+    dev.resetFences(*drawFence);
     auto &renderFinishedSemaphore = renderFinishedSemaphores[imageIndex];
 
     // Record the actual drawing
@@ -170,6 +177,8 @@ void VulkanRenderer::renderFrame()
     };
 
     result = graphicsQueue.presentKHR(presentInfoKHR);
+    if (window->isWindowResizedFAS() || result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR)
+        swapchain->recreate();
     ++frameNumber;
 }
 

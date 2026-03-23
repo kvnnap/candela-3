@@ -11,8 +11,12 @@ export namespace glfw
     using ::glfwInit;
     using ::glfwWindowShouldClose;
     using ::glfwPollEvents;
+    using ::glfwWaitEvents;
     using ::glfwWindowHint;
     using ::glfwCreateWindow;
+    using ::glfwSetWindowUserPointer;
+    using ::glfwGetWindowUserPointer;
+    using ::glfwSetFramebufferSizeCallback;
     using ::glfwDestroyWindow;
     using ::glfwTerminate;
     using ::glfwGetRequiredInstanceExtensions;

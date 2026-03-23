@@ -48,10 +48,41 @@ bool GLFWWindow::glfwProcessMessages()
     return windowCount == 0;
 }
 
+bool GLFWWindow::waitMessages()
+{
+    glfw::glfwWaitEvents();
+    return windowCount == 0;
+}
+
+void GLFWWindow::waitUntilClientAreaExists()
+{
+    while (true)
+    {
+        auto [width, height] = getWindowClientAreaSize();
+        if (width != 0 && height != 0)
+            break;
+
+        waitMessages();
+    }
+    isWindowResizedFAS(false); // reset due to message pump setting it to true
+}
+
+bool GLFWWindow::isWindowResizedFAS(bool isResized)
+{
+    auto b = hasResized;
+    hasResized = isResized;
+    return b;
+}
+
+static void framebufferResizeCallback(glfw::GLFWwindow* window, int width, int height) {
+    auto app = reinterpret_cast<GLFWWindow*>(glfw::glfwGetWindowUserPointer(window));
+    app->isWindowResizedFAS(true);
+}
+
 // instance
 
 GLFWWindow::GLFWWindow(const std::string& name, int width, int height)
-    : window()
+    : window(), hasResized()
 {
     using namespace glfw;
     init(); // static
@@ -61,6 +92,8 @@ GLFWWindow::GLFWWindow(const std::string& name, int width, int height)
 
     window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
     handleGLFWError(window == nullptr ? glfw_false : glfw_true);
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 GLFWWindow::~GLFWWindow()

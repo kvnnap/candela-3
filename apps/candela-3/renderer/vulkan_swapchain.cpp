@@ -28,8 +28,19 @@ void VulkanSwapchain::initSurface()
 
 void VulkanSwapchain::initSwapchain()
 {
+    swapChainImageViews.clear();
+    swapChainImages.clear();
+    swapChain = nullptr;
+    
     createSwapChain();
     createImageViews();
+}
+
+void VulkanSwapchain::recreate()
+{
+    window.waitUntilClientAreaExists();
+    device->wait();
+    initSwapchain();
 }
 
 void VulkanSwapchain::createSurface()

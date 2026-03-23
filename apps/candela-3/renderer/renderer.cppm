@@ -105,6 +105,7 @@ export namespace candela::renderer
         
         void initSurface();
         void initSwapchain();
+        void recreate();
 
     private:
         void createSurface();
