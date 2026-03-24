@@ -1,8 +1,6 @@
-module;
-
-#include "lyra/lyra.hpp"
-
 module candela.args;
+
+import external.lyra;
 
 using candela::args::CandelaArguments;
 

@@ -37,7 +37,7 @@ target_sources(core PRIVATE
 # )
 
 target_sources(core PUBLIC 
-    FILE_SET cxx_modules TYPE CXX_MODULES 
+    FILE_SET core_modules TYPE CXX_MODULES 
     FILES
         configuration/configuration.cppm
         configuration/configuration_node.cppm

@@ -194,6 +194,10 @@ export namespace candela::renderer
         std::unique_ptr<VulkanPipeline> pipeline;
         std::unique_ptr<VulkanCommand> command;
 
+        // Vertices
+        vk::raii::Buffer vertexBuffer = nullptr;
+        vk::raii::DeviceMemory vertexBufferMemory = nullptr;
+
         // Sync stuff
         std::vector<vk::raii::Semaphore> presentCompleteSemaphores;
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores; // based on swapchain frame index

@@ -1,9 +1,23 @@
 module candela.renderer;
 
 import core.util;
+import glm;
 
 using candela::renderer::VulkanRenderer;
 using candela::renderer::VulkanInstance;
+
+// temporary data
+struct Vertex
+{
+    glm::vec2 pos;
+    glm::vec3 color;
+};
+
+static const std::vector<Vertex> vertices = {
+    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
 
 VulkanRenderer::VulkanRenderer()
     : frameNumber(), swapchainUnavailble()
@@ -62,6 +76,7 @@ void VulkanRenderer::recordCommandBuffer(std::uint32_t imageIndex, std::uint32_t
     commandBuffer.setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f));
     commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), extent));
 
+    commandBuffer.bindVertexBuffers(0, *vertexBuffer, {0});
     commandBuffer.draw(3, 1, 0, 0);
 
     // End rendering
@@ -128,6 +143,38 @@ void VulkanRenderer::init()
 
     command = std::make_unique<VulkanCommand>(*device);
     command->init();
+
+    // Vertex buffer
+    auto &dev = device->getDevice();
+    vk::BufferCreateInfo bufferInfo{ 
+        .size = sizeof(vertices[0]) * vertices.size(), 
+        .usage = vk::BufferUsageFlagBits::eVertexBuffer, 
+        .sharingMode = vk::SharingMode::eExclusive };
+    vertexBuffer = vk::raii::Buffer(dev, bufferInfo);
+    vk::MemoryRequirements memRequirements = vertexBuffer.getMemoryRequirements();
+    vk::PhysicalDeviceMemoryProperties memProperties = device->getPhysicalDevice().getMemoryProperties();
+    auto fn = [&](std::uint32_t typeFilter, vk::MemoryPropertyFlags properties){
+        for (std::uint32_t i = 0; i < memProperties.memoryTypeCount; ++i) {
+            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                return i;
+            }
+        }
+        return memProperties.memoryTypeCount;
+    };
+    auto memTypeIndex = fn(memRequirements.memoryTypeBits, 
+        vk::MemoryPropertyFlagBits::eHostVisible | 
+        vk::MemoryPropertyFlagBits::eHostCoherent);
+    vk::MemoryAllocateInfo memoryAllocateInfo{  
+        .allocationSize = memRequirements.size, 
+        .memoryTypeIndex = memTypeIndex 
+    };
+
+    vertexBufferMemory = vk::raii::DeviceMemory( dev, memoryAllocateInfo );
+    vertexBuffer.bindMemory(*vertexBufferMemory, 0);
+
+    void *data = vertexBufferMemory.mapMemory(0, bufferInfo.size);
+    std::memcpy(data, vertices.data(), bufferInfo.size);
+    vertexBufferMemory.unmapMemory();
 
     createSyncObjects();
 }

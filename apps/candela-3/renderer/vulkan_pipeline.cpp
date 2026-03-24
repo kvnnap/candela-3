@@ -48,7 +48,17 @@ void VulkanPipeline::createGraphicsPipeline()
 
     vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-    vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+    //vertex description
+    auto binding = vk::VertexInputBindingDescription{ 0, 20, vk::VertexInputRate::eVertex };
+    auto attribs = std::array<vk::VertexInputAttributeDescription, 2> { //location,binding,format,offset
+            vk::VertexInputAttributeDescription( 0, 0, vk::Format::eR32G32Sfloat, 0 ), // pos
+            vk::VertexInputAttributeDescription( 1, 0, vk::Format::eR32G32B32Sfloat, 8 ) //color
+    };
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo{ .vertexBindingDescriptionCount   = 1,
+                                                        .pVertexBindingDescriptions      = &binding,
+                                                        .vertexAttributeDescriptionCount = static_cast<std::uint32_t>( attribs.size() ),
+                                                        .pVertexAttributeDescriptions    = attribs.data() };
+
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly{  .topology = vk::PrimitiveTopology::eTriangleList };
     // vk::Viewport { 0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f };
     // vk::Rect2D { vk::Offset2D{ 0, 0 }, swapChainExtent };

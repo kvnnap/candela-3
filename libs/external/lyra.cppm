@@ -1,6 +1,6 @@
 module;
 
-#include <lyra/lyra.hpp>
+#include "lyra/lyra.hpp"
 
 export module external.lyra;
 

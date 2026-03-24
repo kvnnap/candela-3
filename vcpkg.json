@@ -4,6 +4,7 @@
     "bfgroup-lyra",
     "glfw3",
     "vulkan-headers",
-    "shader-slang"
+    "shader-slang",
+    "glm"
   ]
 }

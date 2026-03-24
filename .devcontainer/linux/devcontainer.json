@@ -48,7 +48,8 @@
 			"extensions": [
 				"ms-vscode.cmake-tools",
 				"llvm-vs-code-extensions.vscode-clangd",
-				"vadimcn.vscode-lldb"
+				"vadimcn.vscode-lldb",
+				"shader-slang.slang-language-extension"
 			]
 		}
 	}

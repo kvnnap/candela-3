@@ -2,7 +2,6 @@ project(external)
 
 # find_package(cxxopts CONFIG REQUIRED)
 # find_package(CLI11 CONFIG REQUIRED)
-# find_package(lyra CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 
 add_library(external)
@@ -36,7 +35,7 @@ target_link_libraries(external PRIVATE glfw)
 # )
 
 target_sources(external PUBLIC 
-    FILE_SET cxx_modules TYPE CXX_MODULES 
+    FILE_SET glfw_modules TYPE CXX_MODULES 
     FILES
         glfw.cppm
 )
@@ -50,6 +49,24 @@ set_target_properties(external PROPERTIES
     DEBUG_POSTFIX "_d"
 )
 
+find_package(lyra CONFIG REQUIRED)
+target_link_libraries(external PRIVATE bfg::lyra)
+target_sources(external PUBLIC
+        FILE_SET lyra_modules TYPE CXX_MODULES
+        FILES 
+            lyra.cppm
+)
+
+find_package(glm CONFIG REQUIRED)
+target_link_libraries(external PRIVATE glm::glm)
+get_target_property(GLM_INCLUDE_DIR glm::glm-header-only INTERFACE_INCLUDE_DIRECTORIES)
+target_sources(external PUBLIC
+        FILE_SET glm_modules TYPE CXX_MODULES
+        BASE_DIRS 
+            "${GLM_INCLUDE_DIR}"
+        FILES 
+            "${GLM_INCLUDE_DIR}/glm/glm.cppm"
+)
 
 find_package(VulkanHeaders CONFIG)
 
@@ -77,7 +94,7 @@ set_target_properties(VulkanCppModule PROPERTIES
 
 get_target_property(VKH_INCLUDE_DIR Vulkan::Headers INTERFACE_INCLUDE_DIRECTORIES)
 target_sources(VulkanCppModule PUBLIC
-        FILE_SET cxx_modules TYPE CXX_MODULES
+        FILE_SET vulkan_modules TYPE CXX_MODULES
         BASE_DIRS 
             "${VKH_INCLUDE_DIR}"
         FILES 
