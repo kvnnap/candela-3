@@ -162,7 +162,7 @@ export namespace candela::renderer
     };
 
     class VulkanRenderer
-        : public IRenderer
+        : public IRenderer, public core::window::IWindowEvent
     {
     public:
         VulkanRenderer();
@@ -173,6 +173,7 @@ export namespace candela::renderer
         bool processMessages();
     private:
 
+        void onResize(core::window::IWindow* window, int width, int height) override;
         
         void recordCommandBuffer(std::uint32_t imageIndex, std::uint32_t frameIndex);
 
@@ -198,5 +199,6 @@ export namespace candela::renderer
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores; // based on swapchain frame index
         std::vector<vk::raii::Fence> drawFences;
         std::uint64_t frameNumber;
+        bool swapchainUnavailble; // rendering is paused
     };
 }

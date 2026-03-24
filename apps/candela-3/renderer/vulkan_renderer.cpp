@@ -6,7 +6,7 @@ using candela::renderer::VulkanRenderer;
 using candela::renderer::VulkanInstance;
 
 VulkanRenderer::VulkanRenderer()
-    : frameNumber()
+    : frameNumber(), swapchainUnavailble()
 {
     // init();
 }
@@ -109,6 +109,8 @@ void VulkanRenderer::createSyncObjects()
 void VulkanRenderer::init()
 {
     window = std::make_unique<core::window::GLFWWindow>("Candela 3", 800, 600);
+    window->registerWindowEvent(this);
+    
     instance = std::make_unique<VulkanInstance>(*window);
     instance->init();
 
@@ -132,6 +134,9 @@ void VulkanRenderer::init()
 
 void VulkanRenderer::renderFrame()
 {
+    if (swapchainUnavailble)
+        return;
+
     const auto frameMod = getFrameModulo();
     auto &drawFence = drawFences[frameMod];
     auto &presentCompleteSemaphore = presentCompleteSemaphores[frameMod];
@@ -144,7 +149,6 @@ void VulkanRenderer::renderFrame()
     if (result == vk::Result::eErrorOutOfDateKHR) // we've been given an image, so do not recreate for vk::Result::eSuboptimalKHR at this instant
     {
         swapchain->recreate();
-        window->isWindowResizedFAS(); // reset, in
         return;
     }
 
@@ -177,17 +181,27 @@ void VulkanRenderer::renderFrame()
     };
 
     result = graphicsQueue.presentKHR(presentInfoKHR);
-    if (window->isWindowResizedFAS() || result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR)
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR)
         swapchain->recreate();
     ++frameNumber;
 }
 
 bool VulkanRenderer::processMessages() 
 {
-    return window->processMessages();
+    return swapchainUnavailble ? window->waitMessages() : window->processMessages();
 }
 
 std::uint32_t VulkanRenderer::getFrameModulo() const
 {
     return frameNumber % MAX_FRAMES_IN_FLIGHT;
+}
+
+void VulkanRenderer::onResize(core::window::IWindow* window, int width, int height)
+{
+    swapchainUnavailble = width == 0 || height == 0;
+    std::cout << swapchainUnavailble << std::endl;
+    if (swapchainUnavailble)
+        return;
+    // Window resized, recreate swapchain
+    swapchain->recreate();
 }

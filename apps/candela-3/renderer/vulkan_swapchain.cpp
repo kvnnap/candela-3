@@ -38,7 +38,7 @@ void VulkanSwapchain::initSwapchain()
 
 void VulkanSwapchain::recreate()
 {
-    window.waitUntilClientAreaExists();
+    // window.waitUntilClientAreaExists();
     device->wait();
     initSwapchain();
 }

@@ -64,19 +64,11 @@ void GLFWWindow::waitUntilClientAreaExists()
 
         waitMessages();
     }
-    isWindowResizedFAS(false); // reset due to message pump setting it to true
-}
-
-bool GLFWWindow::isWindowResizedFAS(bool isResized)
-{
-    auto b = hasResized;
-    hasResized = isResized;
-    return b;
 }
 
 static void framebufferResizeCallback(glfw::GLFWwindow* window, int width, int height) {
     auto app = reinterpret_cast<GLFWWindow*>(glfw::glfwGetWindowUserPointer(window));
-    app->isWindowResizedFAS(true);
+    app->processResizeEvent(width, height);
 }
 
 // instance
@@ -138,4 +130,15 @@ bool GLFWWindow::createVulkanSurface(const void* vkInstance, void* vkSurfaceKHR)
     auto res = glfw::glfwCreateWindowSurface(*instance, window, nullptr, surface) == 0;
     handleGLFWError(res);
     return res;
+}
+
+void GLFWWindow::registerWindowEvent(IWindowEvent* windowEvent)
+{
+    windowEventCallbacks.emplace_back(windowEvent);
+}
+
+void GLFWWindow::processResizeEvent(int width, int height)
+{
+    for (auto wnd : windowEventCallbacks)
+        wnd->onResize(this, width, height);
 }
