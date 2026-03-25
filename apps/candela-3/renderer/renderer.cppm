@@ -209,5 +209,7 @@ export namespace candela::renderer
         // Vertices
         vk::raii::Buffer vertexBuffer;
         vk::raii::DeviceMemory vertexBufferMemory;
+        vk::raii::Buffer indexBuffer;
+        vk::raii::DeviceMemory indexBufferMemory;
     };
 }

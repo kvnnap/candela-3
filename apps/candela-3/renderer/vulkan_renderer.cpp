@@ -19,9 +19,14 @@ static const std::vector<Vertex> vertices = {
     {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 };
 
+static const std::vector<std::uint16_t> indices = {
+    0, 1, 2
+};
+
 VulkanRenderer::VulkanRenderer()
     : frameNumber(), swapchainUnavailble(), 
-      vertexBuffer(nullptr), vertexBufferMemory(nullptr)
+      vertexBuffer(nullptr), vertexBufferMemory(nullptr),
+      indexBuffer(nullptr), indexBufferMemory(nullptr)
 {
     // init();
 }
@@ -78,7 +83,8 @@ void VulkanRenderer::recordCommandBuffer(std::uint32_t imageIndex, std::uint32_t
     commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), extent));
 
     commandBuffer.bindVertexBuffers(0, *vertexBuffer, {0});
-    commandBuffer.draw(3, 1, 0, 0);
+    commandBuffer.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+    commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
 
     // End rendering
     commandBuffer.endRendering();
@@ -151,6 +157,12 @@ void VulkanRenderer::init()
     auto vbSize = sizeof(vertices[0]) * vertices.size();
     copyDataToLocalDeviceMemory(*device, vertices.data(), vbSize, 
         vertexBuffer, vertexBufferMemory, vk::BufferUsageFlagBits::eVertexBuffer, 
+        command->getCommandBuffer(0), device->getGraphicsQueue());
+    
+    // Index buffer
+    auto ibSize = sizeof(indices[0]) * indices.size();
+    copyDataToLocalDeviceMemory(*device, indices.data(), ibSize, 
+        indexBuffer, indexBufferMemory, vk::BufferUsageFlagBits::eIndexBuffer, 
         command->getCommandBuffer(0), device->getGraphicsQueue());
 }
 
