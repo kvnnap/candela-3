@@ -4,6 +4,8 @@ on:
     branches: [ main ]
 env:
   CANDELA: main # unused
+  VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite"
+  VCPKG_INSTALL_OPTIONS: "--clean-after-build"
 
 jobs:
   build:
@@ -24,6 +26,14 @@ jobs:
         id: vars
         shell: bash
         run: echo "sha_short=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_OUTPUT
+
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v4
+        with: # restore-keys for partial reuse
+          path: .vcpkg-cache
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
 
       - name: Build Candela 3 (Linux)
         if: matrix.os == 'ubuntu-latest'

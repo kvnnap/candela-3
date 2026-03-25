@@ -8,7 +8,7 @@ runs:
       uses: maus007/docker-run-action-fork@v1
       with:
         image: kvnnap/clang:github
-        options: -v ${{github.workspace}}:/workdir -w /workdir
+        options: -v ${{github.workspace}}:/workdir -e VCPKG_BINARY_SOURCES=clear;files,/workdir/.vcpkg-cache,readwrite -e VCPKG_INSTALL_OPTIONS=--clean-after-build -w /workdir
         run: |
           cmake -S . -B build --preset general-release -DCMAKE_INSTALL_PREFIX:PATH=$PWD/install
           cmake --build build --parallel --target install
