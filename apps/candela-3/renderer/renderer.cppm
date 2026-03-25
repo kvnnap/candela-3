@@ -28,7 +28,12 @@ export namespace candela::renderer
 
     constexpr std::uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
+    // Utils
+    class VulkanDevice;
     void transitionImageLayout(const vk::Image& image, vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::AccessFlags2 srcAccessMask, vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask);
+    void createBuffer(const candela::renderer::VulkanDevice& device, vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, vk::raii::Buffer& buffer, vk::raii::DeviceMemory& bufferMemory);
+    // blocks until transfer is complete
+    void copyDataToLocalDeviceMemory(const candela::renderer::VulkanDevice& device, const void* data, std::size_t dSize, vk::raii::Buffer& dBuffer, vk::raii::DeviceMemory& dBufferMemory, vk::BufferUsageFlags dstUsage, const vk::raii::CommandBuffer& cmd, const vk::raii::Queue& copyQueue);
 
 	class IRenderer
 	{
@@ -194,15 +199,15 @@ export namespace candela::renderer
         std::unique_ptr<VulkanPipeline> pipeline;
         std::unique_ptr<VulkanCommand> command;
 
-        // Vertices
-        vk::raii::Buffer vertexBuffer = nullptr;
-        vk::raii::DeviceMemory vertexBufferMemory = nullptr;
-
         // Sync stuff
         std::vector<vk::raii::Semaphore> presentCompleteSemaphores;
         std::vector<vk::raii::Semaphore> renderFinishedSemaphores; // based on swapchain frame index
         std::vector<vk::raii::Fence> drawFences;
         std::uint64_t frameNumber;
         bool swapchainUnavailble; // rendering is paused
+
+        // Vertices
+        vk::raii::Buffer vertexBuffer;
+        vk::raii::DeviceMemory vertexBufferMemory;
     };
 }

@@ -20,7 +20,8 @@ static const std::vector<Vertex> vertices = {
 };
 
 VulkanRenderer::VulkanRenderer()
-    : frameNumber(), swapchainUnavailble()
+    : frameNumber(), swapchainUnavailble(), 
+      vertexBuffer(nullptr), vertexBufferMemory(nullptr)
 {
     // init();
 }
@@ -144,39 +145,13 @@ void VulkanRenderer::init()
     command = std::make_unique<VulkanCommand>(*device);
     command->init();
 
-    // Vertex buffer
-    auto &dev = device->getDevice();
-    vk::BufferCreateInfo bufferInfo{ 
-        .size = sizeof(vertices[0]) * vertices.size(), 
-        .usage = vk::BufferUsageFlagBits::eVertexBuffer, 
-        .sharingMode = vk::SharingMode::eExclusive };
-    vertexBuffer = vk::raii::Buffer(dev, bufferInfo);
-    vk::MemoryRequirements memRequirements = vertexBuffer.getMemoryRequirements();
-    vk::PhysicalDeviceMemoryProperties memProperties = device->getPhysicalDevice().getMemoryProperties();
-    auto fn = [&](std::uint32_t typeFilter, vk::MemoryPropertyFlags properties){
-        for (std::uint32_t i = 0; i < memProperties.memoryTypeCount; ++i) {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-        return memProperties.memoryTypeCount;
-    };
-    auto memTypeIndex = fn(memRequirements.memoryTypeBits, 
-        vk::MemoryPropertyFlagBits::eHostVisible | 
-        vk::MemoryPropertyFlagBits::eHostCoherent);
-    vk::MemoryAllocateInfo memoryAllocateInfo{  
-        .allocationSize = memRequirements.size, 
-        .memoryTypeIndex = memTypeIndex 
-    };
-
-    vertexBufferMemory = vk::raii::DeviceMemory( dev, memoryAllocateInfo );
-    vertexBuffer.bindMemory(*vertexBufferMemory, 0);
-
-    void *data = vertexBufferMemory.mapMemory(0, bufferInfo.size);
-    std::memcpy(data, vertices.data(), bufferInfo.size);
-    vertexBufferMemory.unmapMemory();
-
     createSyncObjects();
+
+    // Vertex buffer
+    auto vbSize = sizeof(vertices[0]) * vertices.size();
+    copyDataToLocalDeviceMemory(*device, vertices.data(), vbSize, 
+        vertexBuffer, vertexBufferMemory, vk::BufferUsageFlagBits::eVertexBuffer, 
+        command->getCommandBuffer(0), device->getGraphicsQueue());
 }
 
 void VulkanRenderer::renderFrame()
@@ -246,7 +221,6 @@ std::uint32_t VulkanRenderer::getFrameModulo() const
 void VulkanRenderer::onResize(core::window::IWindow* window, int width, int height)
 {
     swapchainUnavailble = width == 0 || height == 0;
-    std::cout << swapchainUnavailble << std::endl;
     if (swapchainUnavailble)
         return;
     // Window resized, recreate swapchain
