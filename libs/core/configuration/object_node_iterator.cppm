@@ -15,10 +15,13 @@ namespace core::configuration
     export class ObjectNodeIterator
     {
     public:
+        // Needed if want to enable copy constructor, as it gets deleted in g++
+        // ObjectNodeIterator(const ObjectNodeIterator&) = default;
+        
         ObjectNodeIterator(object_node_types::ObjectNodeCollectionIterator iter);
 
         ObjectItem operator*();
-        ObjectNodeIterator operator++(); 
+        ObjectNodeIterator& operator++(); 
         bool operator!=(const ObjectNodeIterator& other) const;
 
     private:

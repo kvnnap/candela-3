@@ -14,7 +14,7 @@ ObjectItem ObjectNodeIterator::operator*()
     return ObjectItem{ x.first, *x.second };
 }
 
-ObjectNodeIterator ObjectNodeIterator::operator++()
+ObjectNodeIterator& ObjectNodeIterator::operator++()
 {
     return ++iter, *this;
 }
