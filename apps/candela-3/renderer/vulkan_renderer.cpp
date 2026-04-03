@@ -13,6 +13,13 @@ struct Vertex
     glm::vec3 color;
 };
 
+struct UniformBufferObject 
+{
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+};
+
 static const std::vector<Vertex> vertices = {
     {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
     {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
@@ -26,7 +33,8 @@ static const std::vector<std::uint16_t> indices = {
 VulkanRenderer::VulkanRenderer()
     : frameNumber(), swapchainUnavailble(), 
       vertexBuffer(nullptr), vertexBufferMemory(nullptr),
-      indexBuffer(nullptr), indexBufferMemory(nullptr)
+      indexBuffer(nullptr), indexBufferMemory(nullptr),
+      totalTimeMs()
 {
     // init();
 }
@@ -78,6 +86,7 @@ void VulkanRenderer::recordCommandBuffer(std::uint32_t imageIndex, std::uint32_t
 
     // // Rendering commands will go here
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->getGraphicsPipeline());
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->getPipelineLayout(), 0, *pipeline->getDescriptorSet(frameIndex), nullptr);
 
     commandBuffer.setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f));
     commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), extent));
@@ -128,6 +137,18 @@ void VulkanRenderer::createSyncObjects()
     }
 }
 
+void VulkanRenderer::updateUniformBuffer(std::uint32_t frameIndex)
+{
+    auto time = totalTimeMs / 1000.f;
+    UniformBufferObject * ubo = new(uniformBuffersMapped[frameIndex]) UniformBufferObject;
+    ubo->model = glm::ext::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo->view = glm::ext::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    auto [x,y] = window->getWindowClientAreaSize();
+    ubo->proj = glm::ext::perspective(glm::radians(30.0f), static_cast<float>(x) / static_cast<float>(y), 0.1f, 10.0f);
+    ubo->proj[1][1] *= -1;
+    totalTimeMs += fpsCounter.getLastFrameTime();
+}
+
 void VulkanRenderer::init()
 {
     window = std::make_unique<core::window::GLFWWindow>("Candela 3", 800, 600);
@@ -164,6 +185,30 @@ void VulkanRenderer::init()
     copyDataToLocalDeviceMemory(*device, indices.data(), ibSize, 
         indexBuffer, indexBufferMemory, vk::BufferUsageFlagBits::eIndexBuffer, 
         command->getCommandBuffer(0), device->getGraphicsQueue());
+
+    // Uniforms
+    for (auto i = 0u; i < MAX_FRAMES_IN_FLIGHT; ++i) 
+    {
+        vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
+        vk::raii::Buffer buffer({});
+        vk::raii::DeviceMemory bufferMem({});
+        createBuffer(*device, bufferSize, vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, buffer, bufferMem);
+        uniformBuffers.emplace_back(std::move(buffer));
+        uniformBuffersMemory.emplace_back(std::move(bufferMem));
+        uniformBuffersMapped.emplace_back( uniformBuffersMemory[i].mapMemory(0, bufferSize));
+    }
+
+    // Bind descriptor in set with buffers
+    for (std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) 
+    {
+        auto &ds = pipeline->getDescriptorSet(i);
+        vk::DescriptorBufferInfo bufferInfo{ .buffer = uniformBuffers[i], .offset = 0, .range = sizeof(UniformBufferObject) };
+        vk::WriteDescriptorSet descriptorWrite{ 
+            .dstSet = ds, .dstBinding = 0, .dstArrayElement = 0, .descriptorCount = 1, 
+            .descriptorType = vk::DescriptorType::eUniformBuffer, .pBufferInfo = &bufferInfo 
+        };
+        device->getDevice().updateDescriptorSets(descriptorWrite, {});
+    }
 }
 
 void VulkanRenderer::renderFrame()
@@ -190,6 +235,7 @@ void VulkanRenderer::renderFrame()
     auto &renderFinishedSemaphore = renderFinishedSemaphores[imageIndex];
 
     // Record the actual drawing
+    updateUniformBuffer(frameMod);
     recordCommandBuffer(imageIndex, frameMod);
 
     vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
@@ -218,6 +264,8 @@ void VulkanRenderer::renderFrame()
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR)
         swapchain->recreate();
     ++frameNumber;
+    if (fpsCounter.hitFrame())
+        window->setWindowName(std::format("Candela 3 - Frames: {} FPS: {}", fpsCounter.getFrameCount(), fpsCounter.getFramesPerSecond()));
 }
 
 bool VulkanRenderer::processMessages() 
@@ -237,4 +285,5 @@ void VulkanRenderer::onResize(core::window::IWindow* window, int width, int heig
         return;
     // Window resized, recreate swapchain
     swapchain->recreate();
+    fpsCounter.resetFrameCount();
 }

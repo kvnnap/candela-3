@@ -54,4 +54,23 @@ std::vector<const std::ranges::range_value_t<Elems>*> GetElemsNotInSet(const Set
     return eNotFound;
 }
 
+// FPS counter for renderers
+class FpsCounter
+{
+public:
+	FpsCounter();
+
+	bool hitFrame();
+	void resetFrameCount();
+
+	std::uint64_t getFrameCount() const;
+	float getFramesPerSecond() const;
+	std::uint64_t getLastFrameTime() const;
+private:
+	std::uint64_t frames, framesPrev, viewFrames;
+	float fps;
+	std::chrono::milliseconds ms;
+	std::chrono::milliseconds prevMs, currentMs;
+};
+
 }

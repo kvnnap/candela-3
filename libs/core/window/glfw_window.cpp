@@ -142,3 +142,8 @@ void GLFWWindow::processResizeEvent(int width, int height)
     for (auto wnd : windowEventCallbacks)
         wnd->onResize(this, width, height);
 }
+
+void GLFWWindow::setWindowName(const std::string& windowName)
+{
+    glfw::glfwSetWindowTitle(window, windowName.c_str());
+}

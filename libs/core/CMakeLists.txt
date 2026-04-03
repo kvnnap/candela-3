@@ -26,6 +26,7 @@ target_sources(core PRIVATE
     system/shared_library.cpp
 
     util/util.cpp
+    util/fps_counter.cpp
 
     window/glfw_window.cpp
 )

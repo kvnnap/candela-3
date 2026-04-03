@@ -23,6 +23,7 @@ export namespace glfw
     using ::glfwGetError;
     using ::glfwCreateWindowSurface;
     using ::glfwGetFramebufferSize;
+    using ::glfwSetWindowTitle;
 
     constexpr auto glfw_client_api = GLFW_CLIENT_API;
     constexpr auto glfw_no_api = GLFW_NO_API;

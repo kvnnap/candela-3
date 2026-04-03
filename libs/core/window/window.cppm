@@ -23,6 +23,7 @@ public:
     virtual void waitUntilClientAreaExists() = 0;
     virtual std::pair<int, int> getWindowClientAreaSize() const = 0;
     virtual void registerWindowEvent(IWindowEvent* windowEvent) = 0;
+    virtual void setWindowName(const std::string& windowName) = 0;
 };
 
 class IVulkanWindow
@@ -48,6 +49,8 @@ public:
     bool createVulkanSurface(const void* vkInstance, void* vkSurfaceKHR) override;
     void registerWindowEvent(IWindowEvent* windowEvent) override;
     void processResizeEvent(int width, int height);
+
+    void setWindowName(const std::string& windowName) override;
 
     static bool glfwProcessMessages();
 private:

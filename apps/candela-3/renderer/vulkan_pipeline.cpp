@@ -5,12 +5,17 @@ import core.util;
 using candela::renderer::VulkanPipeline;
 
 VulkanPipeline::VulkanPipeline(const VulkanDevice& device, const VulkanSwapchain& swapchain)
-    : device(device), swapchain(swapchain), pipelineLayout(nullptr), graphicsPipeline(nullptr)
+    : device(device), swapchain(swapchain), 
+      descriptorPool(nullptr), descriptorSetLayout(nullptr), 
+      pipelineLayout(nullptr), graphicsPipeline(nullptr)
 {
 }
 
 void VulkanPipeline::init()
 {
+    createDescriptorSetLayout();
+    createDescriptorPool();
+    createDescriptorSets();
     createGraphicsPipeline();
 }
 
@@ -26,6 +31,57 @@ vk::raii::ShaderModule VulkanPipeline::createShaderModule(const std::vector<std:
         .pCode = reinterpret_cast<const std::uint32_t*>(code.data()) 
     };
     return { device.getDevice(), createInfo };
+}
+
+void VulkanPipeline::createDescriptorPool()
+{
+    // vk::DescriptorPoolSize poolSize(vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT);
+    vk::DescriptorPoolSize poolSize {
+        .type = vk::DescriptorType::eUniformBuffer,
+        .descriptorCount = MAX_FRAMES_IN_FLIGHT
+    };
+    vk::DescriptorPoolCreateInfo poolInfo { 
+        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, 
+        .maxSets = MAX_FRAMES_IN_FLIGHT, 
+        .poolSizeCount = 1, 
+        .pPoolSizes = &poolSize 
+    };
+    descriptorPool = vk::raii::DescriptorPool(device.getDevice(), poolInfo);
+}
+
+void VulkanPipeline::createDescriptorSetLayout()
+{
+    vk::DescriptorSetLayoutBinding uboLayoutBinding {
+        .binding = 0, 
+        .descriptorType = vk::DescriptorType::eUniformBuffer,
+        .descriptorCount = 1, 
+        .stageFlags = vk::ShaderStageFlagBits::eVertex, 
+        .pImmutableSamplers = nullptr
+    };
+    vk::DescriptorSetLayoutCreateInfo layoutInfo {
+        .bindingCount = 1, 
+        .pBindings = &uboLayoutBinding
+    };
+    descriptorSetLayout = vk::raii::DescriptorSetLayout(device.getDevice(), layoutInfo);
+}
+
+void VulkanPipeline::createDescriptorSets()
+{
+    std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, *descriptorSetLayout);
+    vk::DescriptorSetAllocateInfo allocInfo{ 
+        .descriptorPool = descriptorPool, 
+        .descriptorSetCount = static_cast<std::uint32_t>(layouts.size()), 
+        .pSetLayouts = layouts.data() 
+    };
+    descriptorSets = device.getDevice().allocateDescriptorSets(allocInfo);
+}
+
+const vk::raii::DescriptorSet& VulkanPipeline::getDescriptorSet(std::size_t i) const {
+    return descriptorSets.at(i);
+}
+
+const vk::raii::PipelineLayout& VulkanPipeline::getPipelineLayout() const {
+    return pipelineLayout;
 }
 
 void VulkanPipeline::createGraphicsPipeline()
@@ -76,7 +132,7 @@ void VulkanPipeline::createGraphicsPipeline()
         .depthClampEnable = vk::False, 
         .rasterizerDiscardEnable = vk::False,
         .polygonMode = vk::PolygonMode::eFill, .cullMode = vk::CullModeFlagBits::eBack,
-        .frontFace = vk::FrontFace::eClockwise, .depthBiasEnable = vk::False,
+        .frontFace = vk::FrontFace::eCounterClockwise, .depthBiasEnable = vk::False,
         .depthBiasSlopeFactor = 1.0f, .lineWidth = 1.0f 
     };
 
@@ -94,7 +150,11 @@ void VulkanPipeline::createGraphicsPipeline()
     vk::PipelineMultisampleStateCreateInfo multisampling{.rasterizationSamples = vk::SampleCountFlagBits::e1, .sampleShadingEnable = vk::False};
 
     // Uniforms
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{  .setLayoutCount = 0, .pushConstantRangeCount = 0 };
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo { 
+        .setLayoutCount = 1,
+        .pSetLayouts = &*descriptorSetLayout,
+        .pushConstantRangeCount = 0 
+    };
     pipelineLayout = vk::raii::PipelineLayout( device.getDevice(), pipelineLayoutInfo );
 
     // Dynamic rendering

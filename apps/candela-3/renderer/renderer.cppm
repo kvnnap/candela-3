@@ -2,6 +2,7 @@ export module candela.renderer;
 
 import std;
 import core.window;
+import core.util;
 import vulkan;
 
 export namespace candela::renderer
@@ -138,13 +139,21 @@ export namespace candela::renderer
         void init();
 
         const vk::raii::Pipeline& getGraphicsPipeline() const;
+        const vk::raii::DescriptorSet& getDescriptorSet(std::size_t i) const;
+        const vk::raii::PipelineLayout& getPipelineLayout() const;
     private:
         vk::raii::ShaderModule createShaderModule(const std::vector<std::byte>& code);
+        void createDescriptorSetLayout(); // May be refactored out later
+        void createDescriptorPool(); // ...
+        void createDescriptorSets(); // May be refactored out later
         void createGraphicsPipeline();
 
         const VulkanDevice& device;
         const VulkanSwapchain& swapchain;
         
+        vk::raii::DescriptorPool descriptorPool; // maybe out of here
+        vk::raii::DescriptorSetLayout descriptorSetLayout;
+        std::vector<vk::raii::DescriptorSet> descriptorSets;
         vk::raii::PipelineLayout pipelineLayout;
         vk::raii::Pipeline graphicsPipeline;
     };
@@ -183,6 +192,7 @@ export namespace candela::renderer
         void recordCommandBuffer(std::uint32_t imageIndex, std::uint32_t frameIndex);
 
         void createSyncObjects();
+        void updateUniformBuffer(std::uint32_t frameIndex);
 
         // static VKAPI_ATTR vk::Bool32 VKAPI_CALL vkDebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
         //                                               vk::DebugUtilsMessageTypeFlagsEXT              type,
@@ -211,5 +221,14 @@ export namespace candela::renderer
         vk::raii::DeviceMemory vertexBufferMemory;
         vk::raii::Buffer indexBuffer;
         vk::raii::DeviceMemory indexBufferMemory;
+
+        // Uniforms
+        std::vector<vk::raii::Buffer> uniformBuffers;
+        std::vector<vk::raii::DeviceMemory> uniformBuffersMemory;
+        std::vector<void*> uniformBuffersMapped;
+
+        // Stats
+        core::util::FpsCounter fpsCounter;
+        std::uint64_t totalTimeMs;
     };
 }
