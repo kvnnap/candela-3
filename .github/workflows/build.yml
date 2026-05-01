@@ -2,6 +2,11 @@ name: Build
 on:
   push:
     branches: [ main ]
+
+# Needed for release job
+permissions:
+  contents: write
+
 env:
   CANDELA: main # unused
   VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite"
@@ -25,7 +30,7 @@ jobs:
       - name: Set SHA_SHORT
         id: vars
         shell: bash
-        run: echo "sha_short=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_OUTPUT
+        run: echo "sha_short=$(echo $GITHUB_SHA | cut -c 1-7)" >> $GITHUB_OUTPUT
 
       - name: Cache vcpkg binaries
         uses: actions/cache@v4
@@ -49,3 +54,63 @@ jobs:
           name: candela-3-${{ steps.vars.outputs.sha_short }}-${{ matrix.os }}
           path: install
           retention-days: 14
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get short SHA
+        id: vars
+        run: echo "sha_short=$(echo $GITHUB_SHA | cut -c 1-7)" >> $GITHUB_OUTPUT
+
+      - name: Delete previous rolling release (if exists)
+        run: |
+          if gh release view rolling &>/dev/null; then
+            echo "Existing rolling release. Deleting it."
+            gh release delete rolling -y
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update rolling tag
+        run: |
+          git tag -f rolling
+          git push origin rolling --force
+
+      - name: Create rolling pre-release
+        run: |
+          NOTES=$(cat <<EOF
+          Latest build from main branch.
+
+          **Build Info:**
+          - Commit: $GITHUB_SHA
+          - Workflow: [View workflow run](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+          EOF
+          )
+
+          gh release create rolling \
+            --title "Rolling Build (${{ steps.vars.outputs.sha_short }})" \
+            --notes "$NOTES" \
+            --prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload binaries
+        run: |
+          cd artifacts
+          for dir in ./*/; do
+            name=$(basename "$dir")
+            echo "Zipping $name"
+            zip -r "../${name}.zip" "$dir"
+            gh release upload rolling "../${name}.zip" --clobber
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
