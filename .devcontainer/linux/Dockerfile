@@ -5,11 +5,12 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
  && apt-get install -y --no-install-recommends git clang ninja-build wget ca-certificates \
                                                curl zip unzip tar python3 pkg-config \
+					       autoconf autoconf-archive automake libtool make \
                                                libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev pkg-config \
  && rm -rf /var/lib/apt/lists/*
 
 # CMAKE
-ARG CMAKEVERSION=4.3.0
+ARG CMAKEVERSION=4.4.3
 ARG CMAKETAR=cmake-${CMAKEVERSION}-linux-x86_64.tar.gz
 RUN cd \
  && wget https://github.com/Kitware/CMake/releases/download/v${CMAKEVERSION}/${CMAKETAR} \
